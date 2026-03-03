@@ -1,0 +1,77 @@
+{
+    "@@locale": "de",
+    "language": "Deutsch",
+    "@language": {
+        "description": "Ausgewählte Sprache"
+    },
+    "battleNow": "Jetzt kämpfen",
+    "selectLanguage": "Sprache auswählen",
+    "ratingForLanguage": "Wertung ({languageLabel}): {rating}",
+    "@ratingForLanguage": {
+        "description": "Bewertungstext mit Sprachname und Wert",
+        "placeholders": {
+            "languageLabel": {
+                "type": "String"
+            },
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "loginToSeeRating": "Melde dich an, um deine Wertung zu sehen.",
+    "waitingForOpponent": "Warte auf einen Gegner...",
+    "battleRound": "Kampfrunde {round}",
+    "@battleRound": {
+        "description": "Titel für eine Kampfrunde",
+        "placeholders": {
+            "round": {
+                "type": "int"
+            }
+        }
+    },
+    "timeLeft": "Verbleibende Zeit: {seconds} s",
+    "@timeLeft": {
+        "description": "Countdown-Anzeige für die Fragezeit",
+        "placeholders": {
+            "seconds": {
+                "type": "int"
+            }
+        }
+    },
+    "scoreLine": "Punktestand: {meName} {meScore} - {opponentName} {opponentScore}",
+    "@scoreLine": {
+        "description": "Punktestand beider Spieler",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "gameOverSummary": "Spiel vorbei!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+    "@gameOverSummary": {
+        "description": "Zusammenfassung nach Spielende mit den Punkteständen",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "returnToHome": "Zurück zum Start",
+    "youFinishedWaitingOpponent": "Du hast alle Fragen beendet.\\nWarte, bis der Gegner fertig ist...",
+    "currentScore": "Aktueller Punktestand: {meName} {meScore} - {opponentName} {opponentScore}",
+    "@currentScore": {
+        "description": "Aktueller Punktestand während des Wartens",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "languageEnglish": "Englisch",
+    "languageGerman": "Deutsch",
+    "languageFrench": "Französisch",
+    "languageRomanian": "Rumänisch"
+}

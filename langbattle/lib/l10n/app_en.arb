@@ -1,0 +1,77 @@
+{
+    "@@locale": "en",
+    "language": "English",
+    "@language": {
+        "description": "Selected Language"
+    },
+    "battleNow": "Battle Now",
+    "selectLanguage": "Select language",
+    "ratingForLanguage": "Rating ({languageLabel}): {rating}",
+    "@ratingForLanguage": {
+        "description": "Rating label with language name and value",
+        "placeholders": {
+            "languageLabel": {
+                "type": "String"
+            },
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "loginToSeeRating": "Log in to see your rating.",
+    "waitingForOpponent": "Waiting for opponent...",
+    "battleRound": "Battle Round {round}",
+    "@battleRound": {
+        "description": "Title for battle round",
+        "placeholders": {
+            "round": {
+                "type": "int"
+            }
+        }
+    },
+    "timeLeft": "Time left: {seconds} s",
+    "@timeLeft": {
+        "description": "Countdown label for question timer",
+        "placeholders": {
+            "seconds": {
+                "type": "int"
+            }
+        }
+    },
+    "scoreLine": "Score: {meName} {meScore} - {opponentName} {opponentScore}",
+    "@scoreLine": {
+        "description": "Score line with both players",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "gameOverSummary": "Game Over!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+    "@gameOverSummary": {
+        "description": "Game over summary with both scores",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "returnToHome": "Return to Home",
+    "youFinishedWaitingOpponent": "You have completed all questions.\\nWaiting for opponent to finish...",
+    "currentScore": "Current score: {meName} {meScore} - {opponentName} {opponentScore}",
+    "@currentScore": {
+        "description": "Current score line while waiting",
+        "placeholders": {
+            "meName": { "type": "String" },
+            "meScore": { "type": "int" },
+            "opponentName": { "type": "String" },
+            "opponentScore": { "type": "int" }
+        }
+    },
+    "languageEnglish": "English",
+    "languageGerman": "German",
+    "languageFrench": "French",
+    "languageRomanian": "Romanian"
+}

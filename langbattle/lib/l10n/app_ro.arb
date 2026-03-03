@@ -1,0 +1,78 @@
+{
+  "@@locale": "ro",
+  "language": "Română",
+  "@language": {
+    "description": "Limba selectată"
+  },
+  "battleNow": "Luptă acum",
+  "selectLanguage": "Alege limba",
+  "ratingForLanguage": "Rating ({languageLabel}): {rating}",
+  "@ratingForLanguage": {
+    "description": "Rating pentru limbă cu nume și valoare",
+    "placeholders": {
+      "languageLabel": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "loginToSeeRating": "Autentifică-te pentru a-ți vedea ratingul.",
+  "waitingForOpponent": "Se așteaptă adversarul...",
+  "battleRound": "Runda de luptă {round}",
+  "@battleRound": {
+    "description": "Titlu pentru runda de luptă",
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "timeLeft": "Timp rămas: {seconds} s",
+  "@timeLeft": {
+    "description": "Etichetă pentru cronometru întrebare",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "scoreLine": "Scor: {meName} {meScore} - {opponentName} {opponentScore}",
+  "@scoreLine": {
+    "description": "Linie de scor cu ambii jucători",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "gameOverSummary": "Joc terminat!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+  "@gameOverSummary": {
+    "description": "Rezumat la finalul jocului cu scorurile",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "returnToHome": "Înapoi la acasă",
+  "youFinishedWaitingOpponent": "Ai terminat toate întrebările.\\nSe așteaptă ca adversarul să termine...",
+  "currentScore": "Scor curent: {meName} {meScore} - {opponentName} {opponentScore}",
+  "@currentScore": {
+    "description": "Linie de scor curent în timp ce se așteaptă",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "languageEnglish": "Engleză",
+  "languageGerman": "Germană",
+  "languageFrench": "Franceză",
+  "languageRomanian": "Română"
+}
+

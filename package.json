@@ -1,0 +1,17 @@
+{
+"scripts": {
+    "server": "cd lang-server && node server.js",
+    "app": "cd langbattle && flutter run -d chrome",
+    "dev": "concurrently \"npm run server\" \"npm run app\" \"npm run app\""
+  },
+
+    "dependencies": {
+        
+
+        
+
+    "concurrently": "^9.2.1"
+    
+
+}
+}

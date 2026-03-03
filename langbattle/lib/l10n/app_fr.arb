@@ -1,0 +1,78 @@
+{
+  "@@locale": "fr",
+  "language": "Français",
+  "@language": {
+    "description": "Langue sélectionnée"
+  },
+  "battleNow": "Combattre maintenant",
+  "selectLanguage": "Choisir la langue",
+  "ratingForLanguage": "Classement ({languageLabel}) : {rating}",
+  "@ratingForLanguage": {
+    "description": "Rating label with language name and value",
+    "placeholders": {
+      "languageLabel": {
+        "type": "String"
+      },
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "loginToSeeRating": "Connectez-vous pour voir votre classement.",
+  "waitingForOpponent": "En attente de l'adversaire...",
+  "battleRound": "Manche de combat {round}",
+  "@battleRound": {
+    "description": "Title for battle round",
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "timeLeft": "Temps restant : {seconds} s",
+  "@timeLeft": {
+    "description": "Countdown label for question timer",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "scoreLine": "Score : {meName} {meScore} - {opponentName} {opponentScore}",
+  "@scoreLine": {
+    "description": "Score line with both players",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "gameOverSummary": "Fin de la partie !\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+  "@gameOverSummary": {
+    "description": "Game over summary with both scores",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "returnToHome": "Retour à l'accueil",
+  "youFinishedWaitingOpponent": "Vous avez terminé toutes les questions.\\nEn attente que l'adversaire termine...",
+  "currentScore": "Score actuel : {meName} {meScore} - {opponentName} {opponentScore}",
+  "@currentScore": {
+    "description": "Current score line while waiting",
+    "placeholders": {
+      "meName": { "type": "String" },
+      "meScore": { "type": "int" },
+      "opponentName": { "type": "String" },
+      "opponentScore": { "type": "int" }
+    }
+  },
+  "languageEnglish": "Anglais",
+  "languageGerman": "Allemand",
+  "languageFrench": "Français",
+  "languageRomanian": "Roumain"
+}
+

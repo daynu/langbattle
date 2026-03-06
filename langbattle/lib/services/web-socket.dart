@@ -237,7 +237,7 @@ class BattleService {
     });
   }
 
-  void sendAnswer(String questionId, String answer) {
+  void sendAnswer(String questionId, dynamic answer) {
     if (socket == null || roomId == null) return;
 
     socket!.emit("player_event", {

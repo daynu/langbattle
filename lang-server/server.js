@@ -1,8 +1,9 @@
 //Websocket
-
+const dotenv = require("dotenv");
+dotenv.config();
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "hallelujahhehe"
+const JWT_SECRET = process.env.JWT_SECRET
 const io = new Server(5000, {
   cors: { origin: "*" },
   methods: ["GET", "POST"]
@@ -830,7 +831,8 @@ socket.on("register", async ({ email, password, name }) => {
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcrypt");
 
-const mongo_db_URI = "mongodb+srv://danu111gribincea_db_user:blue2012@langbattle.3txijkg.mongodb.net/?appName=LangBattle";
+const mongo_db_URI = process.env.mongo_db_URI;
+console.log("Connecting to MongoDB at", mongo_db_URI);
 
 const client = new MongoClient(mongo_db_URI);
 

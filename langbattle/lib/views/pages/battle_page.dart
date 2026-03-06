@@ -3,7 +3,7 @@ import 'package:langbattle/objects/question.dart';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'dart:async';
-
+import 'package:langbattle/widgets/gap_fill_widget.dart';
 
 
 class BattleScreen extends StatefulWidget {
@@ -150,11 +150,11 @@ class _BattleScreenState extends State<BattleScreen> {
     final question = questions[currentIndex];
 
     // Update local score for me if correct
-    if (answer == question.correctAnswer) {
-      setState(() {
-        scores["me"] = (scores["me"] ?? 0) + 1;
-      });
-    }
+    if (question.correctAnswers!.contains(answer)) {
+  setState(() {
+    scores["me"] = (scores["me"] ?? 0) + 1;
+  });
+}
 
     widget.battleService.sendAnswer(question.id, answer);
 
@@ -290,36 +290,93 @@ class _BattleScreenState extends State<BattleScreen> {
         ),
       ),
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(question.text, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 16),
-          Text(
-            loc.timeLeft(remainingSeconds),
-            style: const TextStyle(fontSize: 18, color: Colors.red),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(question.text, style: const TextStyle(fontSize: 24)),
+        const SizedBox(height: 16),
+        Text(
+          loc.timeLeft(remainingSeconds),
+          style: const TextStyle(fontSize: 18, color: Colors.red),
+        ),
+        const SizedBox(height: 16),
+
+        _buildQuestionWidget(question),
+
+        const SizedBox(height: 20),
+        Text(
+          loc.scoreLine(
+            widget.battleService.currentUser?.name ?? "Me",
+            scores["me"] ?? 0,
+            opponentName ?? "Opponent",
+            scores["opponent"] ?? 0,
           ),
-          const SizedBox(height: 16),
-          ...question.options.map(
-            (opt) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: ElevatedButton(
-                onPressed: () => answerQuestion(opt),
-                child: Text(opt),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            loc.scoreLine(
-              widget.battleService.currentUser?.name ?? "Me",
-              scores["me"] ?? 0,
-              opponentName ?? "Opponent",
-              scores["opponent"] ?? 0,
-            ),
-            style: const TextStyle(fontSize: 18),
-          ),
-        ],
-      ),
+          style: const TextStyle(fontSize: 18),
+        ),
+      ],
+    ),
     );
   }
+
+  Widget _buildQuestionWidget(Question question) {
+  switch (question.type) {
+    case "gap_fill":
+      return GapFillWidget(
+        question: question,
+        onSubmit: (answers) => _submitGapFill(question, answers),
+      );
+
+    case "multiple_choice":
+    default:
+      return Column(
+        children: question.options!.map((opt) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+                vertical: 8, horizontal: 16),
+            child: ElevatedButton(
+              onPressed: () => answerQuestion(opt),
+              child: Text(opt),
+            ),
+          );
+        }).toList(),
+      );
+  }
+}
+void _submitGapFill(Question question, List<String> selectedAnswers) {
+  if (gameOver) return;
+
+  bool isCorrect = true;
+
+  if (selectedAnswers.length != question.correctAnswers!.length) {
+    isCorrect = false;
+  } else {
+    for (int i = 0; i < selectedAnswers.length; i++) {
+      if (selectedAnswers[i] != question.correctAnswers![i]) {
+        isCorrect = false;
+        break;
+      }
+    }
+  }
+
+  if (isCorrect) {
+    setState(() {
+      scores["me"] = (scores["me"] ?? 0) + 1;
+    });
+  }
+
+  widget.battleService.sendAnswer(question.id, selectedAnswers);
+
+  _timer?.cancel();
+  setState(() {
+    currentIndex += 1;
+    if (currentIndex >= questions.length) {
+      iFinished = true;
+    }
+  });
+
+  if (iFinished) {
+    _onLocalFinished();
+  } else {
+    _startTimerForCurrentQuestion();
+  }
+}
 }

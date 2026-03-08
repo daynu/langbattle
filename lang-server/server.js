@@ -117,17 +117,22 @@ io.on("connection", (socket) => {
 
       let questionsPayload = { questions: [], language, level: "A1" };
       try {
-        const result = await getRandomQuestions(language, "A1", 10);
-        // Normalize for client: id (from _id), text, options, timeLimit
-        const normalized = (result.questions || []).map((q) => {
+          const result = await getRandomQuestions(language, "A1", 4);
+          const normalized = (result.questions || []).map((q) => {
           const options = Array.isArray(q.options) ? q.options : [];
-          const correctAnswer = q.correctAnswer ?? (q.correctIndex != null ? options[q.correctIndex] : options[0]) ?? '';
+          const correctAnswers = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : q.correctAnswer != null
+              ? [q.correctAnswer.toString()]
+              : [];
+
           return {
             id: (q._id || q.id || q).toString(),
             text: q.text || "Unknown question",
-            options,
+            type: q.type || "multiple_choice",   
             timeLimit: q.timeLimit ?? 15,
-            correctAnswer
+            options,
+            correctAnswers,
           };
         });
         questionsPayload = {

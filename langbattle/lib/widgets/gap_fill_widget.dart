@@ -55,7 +55,7 @@ class _GapFillWidgetState extends State<GapFillWidget> {
 
         Wrap(
           spacing: 8,
-          children: widget.question.options!.map((option) {
+          children: (widget.question.options ?? []).map((option) {  // 👈 remove the !
             return ElevatedButton(
               onPressed: () {
                 if (!selectedAnswers.contains(option)) {

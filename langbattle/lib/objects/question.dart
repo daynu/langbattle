@@ -31,8 +31,10 @@ class Question {
           ? List<String>.from(json['options'])
           : null,
       correctAnswers: json['correctAnswers'] != null
-          ? List<String>.from(json['correctAnswers'])
-          : null,
+    ? List<String>.from(json['correctAnswers'])
+    : json['correctAnswer'] != null
+        ? [json['correctAnswer'].toString()]
+        : [],  // empty list instead of null,
       mediaUrl: json['mediaUrl'],
       metadata: json['metadata'],
     );

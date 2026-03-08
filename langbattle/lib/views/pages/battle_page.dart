@@ -150,7 +150,7 @@ class _BattleScreenState extends State<BattleScreen> {
     final question = questions[currentIndex];
 
     // Update local score for me if correct
-    if (question.correctAnswers!.contains(answer)) {
+    if (question.correctAnswers?.contains(answer) == true) {
   setState(() {
     scores["me"] = (scores["me"] ?? 0) + 1;
   });
@@ -321,6 +321,7 @@ class _BattleScreenState extends State<BattleScreen> {
   switch (question.type) {
     case "gap_fill":
       return GapFillWidget(
+        key: ValueKey(question.id),
         question: question,
         onSubmit: (answers) => _submitGapFill(question, answers),
       );

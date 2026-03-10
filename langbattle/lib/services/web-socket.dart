@@ -210,6 +210,24 @@ class BattleService {
       _controller.add({"type": "error", "message": msg});
     });
 
+    socket!.on("rating_updated", (data) {
+  // Update local user ratings cache
+      final lang = data["language"]?.toString() ?? "";
+      final newRating = data["newRating"] as int?;
+      if (currentUser != null && lang.isNotEmpty && newRating != null) {
+        final updatedRatings = Map<String, int>.from(currentUser!.ratings);
+        updatedRatings[lang] = newRating;
+        currentUser = UserSession(
+          userId: currentUser!.userId,
+          name: currentUser!.name,
+          rating: currentUser!.rating,
+          ratings: updatedRatings,
+          friendsCount: currentUser!.friendsCount,
+        );
+      }
+  _controller.add({"type": "rating_updated", "data": data});
+});
+
     socket!.onConnect((_) {
       print("Connected to Socket.IO server");
       _restoreAuth();
@@ -381,7 +399,7 @@ class BattleService {
   Future<void> _restoreAuth() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
-
+  
     if (token != null) {
       print("Attempting to restore session with token...");
       socket?.emit("auth", {"token": token});
@@ -401,12 +419,13 @@ class BattleService {
     print("Socket disconnected and resources cleaned up.");
   }
 
-  void sendFinish() {
+  void sendFinish({int score = 0}) {
     socket?.emit("player_event", {
       "roomId": roomId,
       "payload": {
         "action": "finish",
         "playerId": currentUser?.userId,
+        "score": score,
       }
     });
   }

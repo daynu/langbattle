@@ -110,21 +110,29 @@ io.on("connection", (socket) => {
       const p2 = queue.shift();
       const roomId = Math.random().toString(36).substring(2, 8);
 
-      rooms[roomId] = [p1, p2];
+      rooms[roomId] = {
+        players: [p1, p2],
+        language,
+        scores: {},   // { [socketId]: number }
+        finished: new Set(),
+      };
 
       p1.join(roomId);
       p2.join(roomId);
 
       let questionsPayload = { questions: [], language, level: "A1" };
       try {
-          const result = await getRandomQuestions(language, "A1", 4);
+          const langKey = language.toLowerCase();
+          const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
+          const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
+          const avgRating = Math.round((r1 + r2) / 2);
+          const level = ratingToLevel(avgRating);
+          const result = await getRandomQuestions(language, level, 4);
           const normalized = (result.questions || []).map((q) => {
           const options = Array.isArray(q.options) ? q.options : [];
           const correctAnswers = Array.isArray(q.correctAnswers)
-            ? q.correctAnswers
-            : q.correctAnswer != null
-              ? [q.correctAnswer.toString()]
-              : [];
+                                ? q.correctAnswers
+                                : [q.correctAnswer ?? (q.correctIndex != null ? options[q.correctIndex] : options[0]) ?? ''];
 
           return {
             id: (q._id || q.id || q).toString(),
@@ -159,9 +167,81 @@ io.on("connection", (socket) => {
   });
 
   // Relay player actions (answers, moves, etc.)
-  socket.on("player_event", (data) => {
-    io.to(data.roomId).emit("player_event", data.payload);
-  });
+socket.on("player_event", async (data) => {
+  const { roomId, payload } = data;
+  io.to(roomId).emit("player_event", payload);
+
+  const room = rooms[roomId];
+  if (!room) return;
+
+  // Track correct answers per player
+  if (payload.action === "answer") {
+    // The client already validates correctness locally; we trust the score
+    // from game_result instead. Nothing to do here unless you want server-authoritative scoring.
+  }
+
+  // When a player finishes, record their score and check if both are done
+  if (payload.action === "finish" || payload.action === "finished") {
+    const score = typeof payload.score === "number" ? payload.score : 0;
+    room.scores[socket.id] = score;
+    room.finished.add(socket.id);
+
+    if (room.finished.size >= 2) {
+      // Both players done — compute ELO
+      const [p1, p2] = room.players;
+      const langKey = room.language.toLowerCase();
+
+      const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
+      const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
+
+      const s1 = room.scores[p1.id] ?? 0;
+      const s2 = room.scores[p2.id] ?? 0;
+
+      // Determine outcome: win=1, draw=0.5, loss=0
+      const scoreA = s1 > s2 ? 1 : s1 === s2 ? 0.5 : 0;
+      const { newA, newB } = calculateElo(r1, r2, scoreA);
+
+      // Update MongoDB per-language ratings
+      if (users && p1.userId && p2.userId) {
+        try {
+          await users.updateOne(
+            { _id: p1.userId },
+            { $set: { [`ratings.${langKey}`]: newA } }
+          );
+          await users.updateOne(
+            { _id: p2.userId },
+            { $set: { [`ratings.${langKey}`]: newB } }
+          );
+        } catch (err) {
+          console.error("ELO update error:", err);
+        }
+      }
+
+      // Update socket caches
+      if (p1.languageRatings) p1.languageRatings[langKey] = newA;
+      if (p2.languageRatings) p2.languageRatings[langKey] = newB;
+
+      // Emit individual rating updates
+      p1.emit("rating_updated", {
+        language: langKey,
+        oldRating: r1,
+        newRating: newA,
+        delta: newA - r1,
+        newLevel: ratingToLevel(newA),
+      });
+      p2.emit("rating_updated", {
+        language: langKey,
+        oldRating: r2,
+        newRating: newB,
+        delta: newB - r2,
+        newLevel: ratingToLevel(newB),
+      });
+
+      console.log(`ELO updated: ${p1.userName} ${r1}→${newA}  ${p2.userName} ${r2}→${newB}`);
+      delete rooms[roomId];
+    }
+  }
+});
 
   // Friends: send a friend request by email or userId
   socket.on("add_friend", async ({ email, userId }) => {
@@ -765,9 +845,11 @@ socket.on("register", async ({ email, password, name }) => {
     }
 
     // Remove from rooms
-    for (const [roomId, players] of Object.entries(rooms)) {
-      if (players.includes(socket)) {
-        const other = players.find((p) => p !== socket);
+    for (const [roomId, room] of Object.entries(rooms)) {
+      const players = room.players || room; // back-compat
+      if (Array.isArray(players) ? players.includes(socket) : players.players?.includes(socket)) {
+        const arr = Array.isArray(players) ? players : players.players;
+        const other = arr.find((p) => p !== socket);
         if (other) {
           other.emit("opponent_disconnected");
         }
@@ -805,7 +887,7 @@ socket.on("register", async ({ email, password, name }) => {
       french: baseRating,
     };
 
-    socket.rating = baseRating;
+    socket.ratings = ratings;
 
     // Track socket for notifications
     trackSocketForUser(socket);
@@ -949,3 +1031,24 @@ function getFallbackQuestions(language) {
 }
 
 connectDB();
+
+
+function ratingToLevel(rating) {
+  if (rating < 1100) return "A1";
+  if (rating < 1200) return "A2";
+  if (rating < 1350) return "B1";
+  if (rating < 1500) return "B2";
+  if (rating < 1700) return "C1";
+  return "C2";
+}
+
+
+function calculateElo(ratingA, ratingB, scoreA, K = 32) {
+  const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+  const expectedB = 1 - expectedA;
+  const scoreB = 1 - scoreA;
+  return {
+    newA: Math.round(ratingA + K * (scoreA - expectedA)),
+    newB: Math.round(ratingB + K * (scoreB - expectedB)),
+  };
+}

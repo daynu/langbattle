@@ -27,6 +27,9 @@ class _BattleScreenState extends State<BattleScreen> {
   bool gameOver = false;
   int remainingSeconds = 0;
   Timer? _timer;
+  int? ratingDelta;
+  int? newRating;
+  String? newLevel;
 
   @override
   void initState() {
@@ -83,6 +86,16 @@ class _BattleScreenState extends State<BattleScreen> {
         });
         _startTimerForCurrentQuestion();
       }
+
+        if (data["type"] == "rating_updated") {
+        final d = data["data"] as Map;
+        setState(() {
+          ratingDelta = d["delta"] as int?;
+          newRating = d["newRating"] as int?;
+          newLevel = d["newLevel"]?.toString();
+        });
+}
+
     });
   }
 
@@ -126,7 +139,7 @@ class _BattleScreenState extends State<BattleScreen> {
 
   void _onLocalFinished() {
     _timer?.cancel();
-    widget.battleService.sendFinish();
+    widget.battleService.sendFinish(score: scores["me"] ?? 0);
     _maybeEndGame();
   }
 
@@ -215,7 +228,20 @@ class _BattleScreenState extends State<BattleScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 24),
               ),
-              const SizedBox(height: 20),
+              if (ratingDelta != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  ratingDelta! >= 0
+                      ? '+$ratingDelta pts → $newRating ($newLevel)'
+                      : '$ratingDelta pts → $newRating ($newLevel)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: ratingDelta! >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+                            const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);

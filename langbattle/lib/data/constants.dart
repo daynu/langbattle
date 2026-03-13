@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class Kconstants {
   static const String themeModeKey = "themeModeKey";
   static const String localeKey = "localeKey";
+  static const String battleLanguageKey = "battleLanguageKey";
 }
 
 

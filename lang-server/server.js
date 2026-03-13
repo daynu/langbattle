@@ -109,18 +109,12 @@ io.on("connection", (socket) => {
       const p1 = queue.shift();
       const p2 = queue.shift();
       const roomId = Math.random().toString(36).substring(2, 8);
-
-      rooms[roomId] = {
-        players: [p1, p2],
-        language,
-        scores: {},   // { [socketId]: number }
-        finished: new Set(),
-      };
+      let questionsPayload = { questions: [], language, level: "A1" };
 
       p1.join(roomId);
       p2.join(roomId);
 
-      let questionsPayload = { questions: [], language, level: "A1" };
+      
       try {
           const langKey = language.toLowerCase();
           const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
@@ -141,6 +135,7 @@ io.on("connection", (socket) => {
             timeLimit: q.timeLimit ?? 15,
             options,
             correctAnswers,
+            explanation: q.explanation || "",
           };
         });
         questionsPayload = {
@@ -152,6 +147,16 @@ io.on("connection", (socket) => {
         console.error("Failed to fetch questions:", err);
         questionsPayload.questions = getFallbackQuestions(language);
       }
+
+        rooms[roomId] = {
+        players: [p1, p2],
+        language,
+        scores: { [p1.id]: 0, [p2.id]: 0 },  
+        finished: new Set(),
+        questions: Object.fromEntries(         
+          questionsPayload.questions.map(q => [q.id, q.correctAnswers])
+        ),
+};
 
       console.log("Match created:", roomId, "questions:", questionsPayload.questions.length);
 
@@ -169,78 +174,35 @@ io.on("connection", (socket) => {
   // Relay player actions (answers, moves, etc.)
 socket.on("player_event", async (data) => {
   const { roomId, payload } = data;
-  io.to(roomId).emit("player_event", payload);
-
   const room = rooms[roomId];
   if (!room) return;
 
-  // Track correct answers per player
   if (payload.action === "answer") {
-    // The client already validates correctness locally; we trust the score
-    // from game_result instead. Nothing to do here unless you want server-authoritative scoring.
-  }
+    const correctAnswers = room.questions?.[payload.questionId];
+    const submitted = Array.isArray(payload.answer) ? payload.answer : [payload.answer];
+    const correct = JSON.stringify(submitted) === JSON.stringify(correctAnswers);
 
-  // When a player finishes, record their score and check if both are done
-  if (payload.action === "finish" || payload.action === "finished") {
-    const score = typeof payload.score === "number" ? payload.score : 0;
-    room.scores[socket.id] = score;
-    room.finished.add(socket.id);
-
-    if (room.finished.size >= 2) {
-      // Both players done — compute ELO
-      const [p1, p2] = room.players;
-      const langKey = room.language.toLowerCase();
-
-      const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
-      const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
-
-      const s1 = room.scores[p1.id] ?? 0;
-      const s2 = room.scores[p2.id] ?? 0;
-
-      // Determine outcome: win=1, draw=0.5, loss=0
-      const scoreA = s1 > s2 ? 1 : s1 === s2 ? 0.5 : 0;
-      const { newA, newB } = calculateElo(r1, r2, scoreA);
-
-      // Update MongoDB per-language ratings
-      if (users && p1.userId && p2.userId) {
-        try {
-          await users.updateOne(
-            { _id: p1.userId },
-            { $set: { [`ratings.${langKey}`]: newA } }
-          );
-          await users.updateOne(
-            { _id: p2.userId },
-            { $set: { [`ratings.${langKey}`]: newB } }
-          );
-        } catch (err) {
-          console.error("ELO update error:", err);
-        }
-      }
-
-      // Update socket caches
-      if (p1.languageRatings) p1.languageRatings[langKey] = newA;
-      if (p2.languageRatings) p2.languageRatings[langKey] = newB;
-
-      // Emit individual rating updates
-      p1.emit("rating_updated", {
-        language: langKey,
-        oldRating: r1,
-        newRating: newA,
-        delta: newA - r1,
-        newLevel: ratingToLevel(newA),
-      });
-      p2.emit("rating_updated", {
-        language: langKey,
-        oldRating: r2,
-        newRating: newB,
-        delta: newB - r2,
-        newLevel: ratingToLevel(newB),
-      });
-
-      console.log(`ELO updated: ${p1.userName} ${r1}→${newA}  ${p2.userName} ${r2}→${newB}`);
-      delete rooms[roomId];
+    // Server increments score — client no longer decides this
+    if (correct) {
+      room.scores[socket.id] = (room.scores[socket.id] ?? 0) + 1;
     }
+
+    // Broadcast to both players with validated result
+    io.to(roomId).emit("player_event", {
+      ...payload,
+      correct,
+    });
+    return;
   }
+
+if (payload.action === "finish" || payload.action === "finished") {
+  room.finished.add(socket.id);
+  io.to(roomId).emit("player_event", payload);
+
+  if (room.finished.size >= 2) {
+    await resolveRoom(roomId); 
+  }
+}
 });
 
   // Friends: send a friend request by email or userId
@@ -445,6 +407,14 @@ socket.on("player_event", async (data) => {
       socket.emit("error_msg", "Could not remove friend");
     }
   });
+
+
+  socket.on("leave_queue", () => {
+  for (const lang of Object.keys(queuesByLanguage)) {
+    queuesByLanguage[lang] = queuesByLanguage[lang].filter((s) => s !== socket);
+  }
+  console.log(`Player ${socket.userName} left the queue`);
+});
 
   // Friends: search potential new friends by name (live search)
   socket.on("search_players", async ({ name }) => {
@@ -834,29 +804,32 @@ socket.on("register", async ({ email, password, name }) => {
 
   // Handle disconnect
   socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
+  untrackSocketForUser(socket);
 
-    // Untrack for notifications
-    untrackSocketForUser(socket);
+  for (const lang of Object.keys(queuesByLanguage)) {
+    queuesByLanguage[lang] = queuesByLanguage[lang].filter(s => s !== socket);
+  }
 
-    // Remove from all queues
-    for (const lang of Object.keys(queuesByLanguage)) {
-      queuesByLanguage[lang] = queuesByLanguage[lang].filter((s) => s !== socket);
-    }
-
-    // Remove from rooms
-    for (const [roomId, room] of Object.entries(rooms)) {
-      const players = room.players || room; // back-compat
-      if (Array.isArray(players) ? players.includes(socket) : players.players?.includes(socket)) {
-        const arr = Array.isArray(players) ? players : players.players;
-        const other = arr.find((p) => p !== socket);
-        if (other) {
-          other.emit("opponent_disconnected");
+  for (const [roomId, room] of Object.entries(rooms)) {
+    if (room.players?.includes(socket)) {
+      const other = room.players.find(p => p !== socket);
+      if (other) {
+        other.emit("opponent_disconnected");
+        // Give disconnected player a score of -1 so they always lose the ELO calculation
+        room.scores[socket.id] = -1;
+        room.finished.add(socket.id);
+        // Trigger ELO if the other player had already finished
+        if (room.finished.size >= 2) {
+          // re-use the same finish logic by faking a finish event
+          socket.emit = () => {}; // silence any emits to the dead socket
+          resolveRoom(roomId); 
+          return;// inline the ELO resolution rather than duplicating — extract to a function
         }
-        delete rooms[roomId];
       }
+      delete rooms[roomId];
     }
-  });
+  }
+});
 
   const { ObjectId } = require("mongodb");
  
@@ -912,6 +885,59 @@ socket.on("register", async ({ email, password, name }) => {
 
 
 });
+
+
+async function resolveRoom(roomId) {
+  const room = rooms[roomId];
+  if (!room || room.finished.size < 2) return;
+
+  const [p1, p2] = room.players;
+  const langKey = room.language.toLowerCase();
+  const r1 = p1.ratings?.[langKey] || 1000;
+  const r2 = p2.ratings?.[langKey] || 1000;
+  const s1 = room.scores[p1.id] ?? 0;
+  const s2 = room.scores[p2.id] ?? 0;
+  const scoreA = s1 > s2 ? 1 : s1 === s2 ? 0.5 : 0;
+  const { newA, newB } = calculateElo(r1, r2, scoreA);
+
+  if (users && p1.userId && p2.userId) {
+    try {
+      const now = new Date();
+
+      await users.updateOne({ _id: p1.userId }, {
+        $set: { [`ratings.${langKey}`]: newA },
+        $push: { ratingHistory: { rating: newA, language: langKey, date: now } }
+      });
+      await users.updateOne({ _id: p2.userId }, {
+        $set: { [`ratings.${langKey}`]: newB },
+        $push: { ratingHistory: { rating: newB, language: langKey, date: now } }
+      });
+
+      await db.collection("games").insertOne({
+        players: [
+          { userId: p1.userId, name: p1.userName, score: s1, ratingBefore: r1, ratingAfter: newA },
+          { userId: p2.userId, name: p2.userName, score: s2, ratingBefore: r2, ratingAfter: newB },
+        ],
+        language: langKey,
+        level: ratingToLevel(Math.round((r1 + r2) / 2)),
+        playedAt: now,
+      });
+
+    } catch (err) {
+      console.error("ELO update error:", err);
+    }
+  }
+
+  if (p1.ratings) p1.ratings[langKey] = newA;
+  if (p2.ratings) p2.ratings[langKey] = newB;
+
+  p1.emit("rating_updated", { language: langKey, oldRating: r1, newRating: newA, delta: newA - r1, newLevel: ratingToLevel(newA) });
+  p2.emit("rating_updated", { language: langKey, oldRating: r2, newRating: newB, delta: newB - r2, newLevel: ratingToLevel(newB) });
+
+  console.log(`ELO updated: ${p1.userName} ${r1}→${newA}  ${p2.userName} ${r2}→${newB}`);
+  delete rooms[roomId];
+}
+
 
 
 //database

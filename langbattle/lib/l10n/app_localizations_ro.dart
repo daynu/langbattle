@@ -39,6 +39,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get reviewAnswers => 'Revizuiește răspunsurile';
+
+
+  @override
   String scoreLine(String meName, int meScore, String opponentName, int opponentScore) {
     return 'Scor: $meName $meScore - $opponentName $opponentScore';
   }

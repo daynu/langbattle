@@ -50,6 +50,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnToHome => 'Return to Home';
+  String get reviewAnswers => 'Review Answers';
 
   @override
   String get youFinishedWaitingOpponent => 'You have completed all questions.\\nWaiting for opponent to finish...';

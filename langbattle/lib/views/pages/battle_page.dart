@@ -4,6 +4,7 @@ import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'dart:async';
 import 'package:langbattle/widgets/gap_fill_widget.dart';
+import 'review_answers_screen.dart';
 
 
 class BattleScreen extends StatefulWidget {
@@ -30,6 +31,8 @@ class _BattleScreenState extends State<BattleScreen> {
   int? ratingDelta;
   int? newRating;
   String? newLevel;
+  Map<String, dynamic>? ratingUpdate;
+  Map<String, String> myAnswers = {};
 
   @override
   void initState() {
@@ -45,11 +48,16 @@ class _BattleScreenState extends State<BattleScreen> {
         final String? playerId = payload["playerId"]?.toString();
         final String? myId = widget.battleService.currentUser?.userId;
 
-        // Opponent answered a question
-        if (action == "answer" && playerId != null && playerId != myId) {
-          setState(() {
-            scores["opponent"] = (scores["opponent"] ?? 0) + 1; 
-          });
+        
+        if (action == "answer") {
+          final bool correct = payload["correct"] == true;
+          final bool isMe = playerId == myId;
+          if (correct) {
+            setState(() {
+              scores[isMe ? "me" : "opponent"] = 
+                  (scores[isMe ? "me" : "opponent"] ?? 0) + 1;
+            });
+          }
         }
 
         // Opponent finished all questions
@@ -62,6 +70,12 @@ class _BattleScreenState extends State<BattleScreen> {
           _maybeEndGame();
         }
       }
+
+      if (data["type"] == "rating_updated") {
+      setState(() {
+        ratingUpdate = data;
+      });
+}
 
       if (data["type"] == "match_found") {
         print("Match found: ${data["roomId"]}");
@@ -87,15 +101,13 @@ class _BattleScreenState extends State<BattleScreen> {
         _startTimerForCurrentQuestion();
       }
 
-        if (data["type"] == "rating_updated") {
-        final d = data["data"] as Map;
+        if (data["type"] == "opponent_disconnected") {
+        _timer?.cancel();
         setState(() {
-          ratingDelta = d["delta"] as int?;
-          newRating = d["newRating"] as int?;
-          newLevel = d["newLevel"]?.toString();
+          gameOver = true;
+          opponentFinished = true; // unblock the waiting screen
         });
-}
-
+      }    
     });
   }
 
@@ -161,16 +173,9 @@ class _BattleScreenState extends State<BattleScreen> {
     if (currentIndex >= questions.length || gameOver) return;
 
     final question = questions[currentIndex];
-
-    // Update local score for me if correct
-    if (question.correctAnswers?.contains(answer) == true) {
-  setState(() {
-    scores["me"] = (scores["me"] ?? 0) + 1;
-  });
-}
-
+  
     widget.battleService.sendAnswer(question.id, answer);
-
+    myAnswers[question.id] = answer;
     // Move to next question or finish
     _timer?.cancel();
     setState(() {
@@ -197,7 +202,7 @@ class _BattleScreenState extends State<BattleScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              widget.battleService.disconnect();
+              widget.battleService.leaveQueue();
               Navigator.pop(context);
             },
           ),
@@ -228,25 +233,29 @@ class _BattleScreenState extends State<BattleScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 24),
               ),
-              if (ratingDelta != null) ...[
-                const SizedBox(height: 12),
+              if (ratingUpdate != null)
                 Text(
-                  ratingDelta! >= 0
-                      ? '+$ratingDelta pts → $newRating ($newLevel)'
-                      : '$ratingDelta pts → $newRating ($newLevel)',
+                  "Rating: ${ratingUpdate!["oldRating"]} → ${ratingUpdate!["newRating"]} "
+                  "(${ratingUpdate!["delta"] > 0 ? "+" : ""}${ratingUpdate!["delta"]})",
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: ratingDelta! >= 0 ? Colors.green : Colors.red,
+                    color: (ratingUpdate!["delta"] as int) >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
-              ],
                             const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
                 child: Text(loc.returnToHome),
+              ),
+              ElevatedButton(child: Text(loc.reviewAnswers),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewAnswersScreen(
+                  questions: questions,
+                  myAnswers: myAnswers,
+                )));
+              },
               ),
             ],
           ),
@@ -371,26 +380,9 @@ class _BattleScreenState extends State<BattleScreen> {
 void _submitGapFill(Question question, List<String> selectedAnswers) {
   if (gameOver) return;
 
-  bool isCorrect = true;
-
-  if (selectedAnswers.length != question.correctAnswers!.length) {
-    isCorrect = false;
-  } else {
-    for (int i = 0; i < selectedAnswers.length; i++) {
-      if (selectedAnswers[i] != question.correctAnswers![i]) {
-        isCorrect = false;
-        break;
-      }
-    }
-  }
-
-  if (isCorrect) {
-    setState(() {
-      scores["me"] = (scores["me"] ?? 0) + 1;
-    });
-  }
 
   widget.battleService.sendAnswer(question.id, selectedAnswers);
+  myAnswers[question.id] = selectedAnswers.join("|");
 
   _timer?.cancel();
   setState(() {

@@ -164,6 +164,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Return to Home'**
   String get returnToHome;
+  String get reviewAnswers;
 
   /// No description provided for @youFinishedWaitingOpponent.
   ///

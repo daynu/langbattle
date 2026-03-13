@@ -6,6 +6,10 @@ import 'package:langbattle/views/pages/profile_page.dart';
 import 'package:langbattle/views/pages/notifications_page.dart';
 import 'package:lottie/lottie.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:langbattle/data/constants.dart';
+
+
 class HomePage extends StatefulWidget {
   
   final BattleService battleService;
@@ -29,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadSavedLanguage();
     _sub = widget.battleService.stream.listen((event) {
       final type = event["type"];
       if (!mounted) return;
@@ -47,6 +52,19 @@ class _HomePageState extends State<HomePage> {
     _sub?.cancel();
     super.dispose();
   }
+
+
+
+Future<void> _loadSavedLanguage() async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString(Kconstants.battleLanguageKey);
+  if (saved != null && languageLabels.containsKey(saved)) {
+    setState(() {
+      selectedLanguage = saved;
+    });
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -166,11 +184,15 @@ class _HomePageState extends State<HomePage> {
                             )
                             .toList(),
                         onChanged: (value) {
-                          if (value == null) return;
-                          setState(() {
-                            selectedLanguage = value;
-                          });
-                        },
+                            if (value == null) return;
+                            setState(() {
+                              selectedLanguage = value;
+                            });
+                            // ← add this
+                            SharedPreferences.getInstance().then(
+                              (prefs) => prefs.setString(Kconstants.battleLanguageKey, value),
+                            );
+                          },
                       ),
                     ),
                     const SizedBox(height: 8),

@@ -29,6 +29,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get waitingForOpponent => 'Warte auf einen Gegner...';
 
   @override
+  String get reviewAnswers => 'Antworten überprüfen';
+
+
+  @override
   String battleRound(int round) {
     return 'Kampfrunde $round';
   }

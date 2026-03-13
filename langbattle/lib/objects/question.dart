@@ -3,6 +3,7 @@ class Question {
   final String text;
   final String type; // "multiple_choice", "fill_blank", "translation", etc.
   final int timeLimit;
+  final String? explanation;
 
   // Optional fields depending on type
   final List<String>? options; 
@@ -19,6 +20,7 @@ class Question {
     this.correctAnswers,
     this.mediaUrl,
     this.metadata,
+    this.explanation
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class Question {
         : null,  // empty list instead of null,
       mediaUrl: json['mediaUrl'],
       metadata: json['metadata'],
+      explanation: json['explanation'],
     );
   }
 }

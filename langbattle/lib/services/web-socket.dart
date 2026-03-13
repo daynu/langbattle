@@ -228,6 +228,30 @@ class BattleService {
   _controller.add({"type": "rating_updated", "data": data});
 });
 
+  socket!.on("rating_updated", (data) {
+  final language = data["language"]?.toString();
+  final newRating = data["newRating"];
+  final parsedRating = newRating is int 
+      ? newRating 
+      : int.tryParse(newRating?.toString() ?? "");
+
+  if (language != null && parsedRating != null && currentUser != null) {
+    // Update the in-memory ratings map
+    final updatedRatings = Map<String, int>.from(currentUser!.ratings);
+    updatedRatings[language] = parsedRating;
+    currentUser = currentUser!.copyWith(ratings: updatedRatings);
+  }
+
+  _controller.add({
+    "type": "rating_updated",
+    "language": language,
+    "newRating": parsedRating,
+    "oldRating": data["oldRating"],
+    "delta": data["delta"],
+    "newLevel": data["newLevel"],
+  });
+});
+
     socket!.onConnect((_) {
       print("Connected to Socket.IO server");
       _restoreAuth();
@@ -417,6 +441,11 @@ class BattleService {
       _controller.close();
     }
     print("Socket disconnected and resources cleaned up.");
+  }
+
+  void leaveQueue() {
+    if (socket == null) return;
+    socket!.emit("leave_queue");
   }
 
   void sendFinish({int score = 0}) {

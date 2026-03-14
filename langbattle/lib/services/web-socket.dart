@@ -41,6 +41,13 @@ class BattleService {
     });
 
 
+    socket!.on("game_history", (data) {
+  _controller.add({
+    "type": "game_history",
+    "games": data["games"] ?? [],
+  });
+});
+
     // 3. Standard Game Events
     socket!.on("match_found", (data) {
       roomId = data["roomId"];
@@ -458,6 +465,10 @@ class BattleService {
       }
     });
   }
+
+  void requestGameHistory() {
+  socket?.emit("get_game_history");
+}
 
   void logout() async {
     final prefs = await SharedPreferences.getInstance();

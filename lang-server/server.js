@@ -539,6 +539,48 @@ if (payload.action === "finish" || payload.action === "finished") {
     }
   });
 
+
+    socket.on("get_game_history", async () => {
+    if (!socket.userId) return;
+    try {
+      const games = await db.collection("games")
+        .find({ "players.userId": socket.userId })
+        .sort({ playedAt: -1 })
+        .limit(20)
+        .toArray();
+
+      socket.emit("game_history", { games: games.map(g => ({
+        id: g._id.toString(),
+        players: g.players.map(p => ({
+          ...p,
+          userId: p.userId.toString(),
+        })),
+        language: g.language,
+        level: g.level,
+        playedAt: g.playedAt,
+      }))});
+    } catch (err) {
+      console.error("get_game_history error:", err);
+    }
+  });
+
+  socket.on("get_rating_history", async ({ language }) => {
+    if (!socket.userId) return;
+    try {
+      const user = await users.findOne(
+        { _id: socket.userId },
+        { projection: { ratingHistory: 1 } }
+      );
+      const history = (user?.ratingHistory ?? [])
+        .filter(e => e.language === language)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      socket.emit("rating_history", { history, language });
+    } catch (err) {
+      console.error("get_rating_history error:", err);
+    }
+  });
+
   // Friends: respond to a friend request (accept/reject)
   socket.on("respond_friend_request", async ({ requestId, action }) => {
     try {

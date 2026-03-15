@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import 'package:langbattle/data/notifiers.dart';
 import 'dart:async';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/views/pages/battle_page.dart';
@@ -8,6 +9,7 @@ import 'package:lottie/lottie.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:langbattle/data/constants.dart';
+
 
 
 class HomePage extends StatefulWidget {
@@ -58,13 +60,12 @@ class _HomePageState extends State<HomePage> {
 Future<void> _loadSavedLanguage() async {
   final prefs = await SharedPreferences.getInstance();
   final saved = prefs.getString(Kconstants.battleLanguageKey);
-  if (saved != null && languageLabels.containsKey(saved)) {
-    setState(() {
-      selectedLanguage = saved;
-    });
+  final uiLocale = localeNotifier.value?.languageCode ?? 'en';
+  final localeMap = {'english': 'en', 'german': 'de', 'french': 'fr', 'romanian': 'ro'};
+  if (saved != null && languageLabels.containsKey(saved) && localeMap[saved] != uiLocale) {
+    setState(() => selectedLanguage = saved);
   }
 }
-
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +81,25 @@ Future<void> _loadSavedLanguage() async {
     }[languageKey] ?? selectedLanguage;
     final hasNotifications =
         widget.battleService.friendRequests.isNotEmpty;
+
+  
+  final uiLocale = localeNotifier.value?.languageCode ?? 'en';
+final filteredLanguages = languageLabels.entries.where((e) {
+  // e.key is the language key like "english", "german", etc.
+  final localeMap = {
+    'english': 'en',
+    'german': 'de',
+    'french': 'fr',
+    'romanian': 'ro',
+  };
+  return localeMap[e.key] != uiLocale;
+}).toList();
+
+
+if (!filteredLanguages.any((e) => e.key == selectedLanguage)) {
+  selectedLanguage = filteredLanguages.first.key;
+}
+
 
     return SingleChildScrollView(
       child: Padding(
@@ -166,7 +186,7 @@ Future<void> _loadSavedLanguage() async {
                           labelText: loc.selectLanguage,
                           border: const OutlineInputBorder(),
                         ),
-                        items: languageLabels.entries
+                        items: filteredLanguages
                             .map(
                               (e) {
                                 final key = e.value;

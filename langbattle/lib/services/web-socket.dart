@@ -40,6 +40,13 @@ class BattleService {
       _controller.add({"type": "auth_failed"});
     });
 
+      socket!.on("rating_history", (data) {
+    _controller.add({
+      "type": "rating_history",
+      "language": data["language"],
+      "history": data["history"] ?? [],
+    });
+  });
 
     socket!.on("game_history", (data) {
   _controller.add({
@@ -271,11 +278,13 @@ class BattleService {
 
   
 
-  void register(String email, String password, String name) {
+  void register(String email, String password, String name, {required String language, required int startingRating}) {
     socket?.emit("register", {
       "email": email,
       "password": password,
       "name": name,
+      "selectedLanguage": language, 
+      "startingRating": startingRating,
     });
   }
 
@@ -346,6 +355,10 @@ class BattleService {
     if (socket == null) return;
     socket!.emit("get_friends");
   }
+
+  void requestRatingHistory(String language) {
+  socket?.emit("get_rating_history", {"language": language});
+}
 
   void searchPlayersByName(String name) {
     if (socket == null) return;

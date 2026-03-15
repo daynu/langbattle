@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:langbattle/services/web-socket.dart';
-import 'package:langbattle/views/pages/register_page.dart';
+import 'package:langbattle/views/pages/onboarding-language-page.dart';
 import 'package:langbattle/widgets/hero_widget.dart'; 
 import 'package:langbattle/views/pages/login_page.dart';
 
@@ -52,7 +52,7 @@ class WelcomePage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
-                        RegisterPage(battleService: battleService),
+                        OnboardingLanguagePage(battleService: battleService),
                   ),
                 );
               },

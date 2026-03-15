@@ -88,9 +88,27 @@ io.on("connection", (socket) => {
   // Player joins matchmaking queue
   socket.on("join_queue", async (data = {}) => {
     if (!socket.userName) {
-      socket.emit("error_msg", "You must be authenticated to join the queue");
-      return;
-    }
+    socket.emit("error_msg", "You must be authenticated to join the queue");
+    return;
+  }
+
+  // Prevent same user from queuing on multiple devices
+  const alreadyInQueue = Object.values(queuesByLanguage)
+    .some(q => q.some(s => s.userId?.toString() === socket.userId?.toString()));
+
+  if (alreadyInQueue) {
+    socket.emit("error_msg", "You are already in a queue on another device");
+    return;
+  }
+
+  // Prevent same user from being in an active room
+  const alreadyInRoom = Object.values(rooms)
+    .some(room => room.players?.some(p => p.userId?.toString() === socket.userId?.toString()));
+
+  if (alreadyInRoom) {
+    socket.emit("error_msg", "You are already in a game on another device");
+    return;
+  }
 
     const language = normalizeLanguage(data.language);
     socket.selectedLanguage = language;
@@ -745,50 +763,52 @@ if (payload.action === "finish" || payload.action === "finished") {
     }
   });
 
-socket.on("register", async ({ email, password, name }) => {
-    try {
-      if (!email || !password) {
-        return socket.emit("error_msg", "Missing credentials");
-      }
-
-      const passwordHash = await bcrypt.hash(password, 10);
-
-      const result = await users.insertOne({
-        email,
-        passwordHash,
-        name,
-        // Global rating plus per-language ratings
-        rating: 1000,
-        ratings: {
-          english: 1000,
-          german: 1000,
-          french: 1000,
-        },
-        friends: [],
-        createdAt: new Date(),
-        lastSeen: new Date()
-      });
-
-      socket.userId = result.insertedId;
-      socket.userName = name;
-      socket.rating = 1000;
-
-      socket.emit("register_success", {
-        userId: socket.userId,
-        name,
-        rating: 1000,
-        ratings: {
-          english: 1000,
-          german: 1000,
-          french: 1000,
-        },
-        friendsCount: 0,
-      });
-
-    } catch (err) {
-      socket.emit("error_msg", "Email already exists");
+socket.on("register", async ({ email, password, name, language, startingRating }) => {
+  try {
+    if (!email || !password) {
+      return socket.emit("error_msg", "Missing credentials");
     }
-  });
+
+    const lang = normalizeLanguage(language ?? 'english');
+    const rating = typeof startingRating === 'number' ? startingRating : 200;
+
+    const ratings = {
+      english: null,
+      german: null,
+      french: null,
+      [lang]: rating,
+    };
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = await users.insertOne({
+      email,
+      passwordHash,
+      name,
+      rating,
+      ratings,
+      friends: [],
+      createdAt: new Date(),
+      lastSeen: new Date(),
+    });
+
+    socket.userId = result.insertedId;
+    socket.userName = name;
+    socket.rating = rating;
+    socket.ratings = ratings;
+
+    socket.emit("register_success", {
+      userId: socket.userId,
+      name,
+      rating,
+      ratings,
+      friendsCount: 0,
+    });
+
+  } catch (err) {
+    socket.emit("error_msg", "Email already exists");
+  }
+});
 
     socket.on("login", async ({ email, password }) => {
     if (!users) {
@@ -1102,14 +1122,13 @@ connectDB();
 
 
 function ratingToLevel(rating) {
-  if (rating < 1100) return "A1";
-  if (rating < 1200) return "A2";
-  if (rating < 1350) return "B1";
-  if (rating < 1500) return "B2";
-  if (rating < 1700) return "C1";
+  if (rating < 400) return "A1";
+  if (rating < 700) return "A2";
+  if (rating < 1000) return "B1";
+  if (rating < 1400) return "B2";
+  if (rating < 1800) return "C1";
   return "C2";
 }
-
 
 function calculateElo(ratingA, ratingB, scoreA, K = 32) {
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));

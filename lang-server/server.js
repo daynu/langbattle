@@ -6,7 +6,8 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET
 const io = new Server(5000, {
   cors: { origin: "*" },
-  methods: ["GET", "POST"]
+  methods: ["GET", "POST"],
+  maxHttpBufferSize: 2e6, 
 });
 
 const queuesByLanguage = {
@@ -188,6 +189,27 @@ io.on("connection", (socket) => {
       });
     }
   });
+
+   socket.on("upload_avatar", async ({ base64Image }) => {
+    console.log("upload_avatar received, size:", base64Image?.length);
+  if (!socket.userId || !base64Image) return;
+  try {
+    // Sanity-check size — base64 of 500KB image ≈ 680KB string
+    if (base64Image.length > 700_000) {
+      return socket.emit("error_msg", "Image is too large. Please choose a smaller photo.");
+    }
+ 
+    await users.updateOne(
+      { _id: socket.userId },
+      { $set: { avatarBase64: base64Image } }
+    );
+ 
+    socket.emit("avatar_updated", { avatarBase64: base64Image });
+  } catch (err) {
+    console.error("upload_avatar error:", err);
+    socket.emit("error_msg", "Could not upload image");
+  }
+});
 
   // Relay player actions (answers, moves, etc.)
 socket.on("player_event", async (data) => {
@@ -781,6 +803,8 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    now = new Date();
+
     const result = await users.insertOne({
       email,
       passwordHash,
@@ -788,8 +812,8 @@ socket.on("register", async ({ email, password, name, language, startingRating }
       rating,
       ratings,
       friends: [],
-      createdAt: new Date(),
-      lastSeen: new Date(),
+      createdAt: now,
+      lastSeen: now,
     });
 
     socket.userId = result.insertedId;
@@ -803,6 +827,9 @@ socket.on("register", async ({ email, password, name, language, startingRating }
       rating,
       ratings,
       friendsCount: 0,
+      createdAt: now,
+      lastSeen: now,
+      avatarBase64: null
     });
 
   } catch (err) {
@@ -860,6 +887,9 @@ socket.on("register", async ({ email, password, name, language, startingRating }
       rating: baseRating,
       ratings,
       friendsCount,
+      createdAt: user.createdAt,
+      lastSeen: user.lastSeen,
+      avatarBase64: user.avatarBase64 ?? null
     });
   });
 
@@ -938,6 +968,9 @@ socket.on("register", async ({ email, password, name, language, startingRating }
       rating: baseRating,
       ratings,
       friendsCount,
+      createdAt: user.createdAt,
+      lastSeen: user.lastSeen,
+      avatarBase64: user.avatarBase64 ?? null
     });
   } catch (e) {
     console.error("Auth failed", e);

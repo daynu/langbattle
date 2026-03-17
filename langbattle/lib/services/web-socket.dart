@@ -271,6 +271,14 @@ class BattleService {
       _restoreAuth();
     });
 
+    socket!.on("avatar_updated", (data) {
+      final base64 = data["avatarBase64"]?.toString();
+      if (base64 != null && currentUser != null) {
+        currentUser = currentUser!.copyWith(avatarBase64: base64);
+      }
+      _controller.add({"type": "avatar_updated", "avatarBase64": base64});
+    });
+
     socket!.onDisconnect((_) {
       print("Disconnected from server");
     });
@@ -308,6 +316,9 @@ class BattleService {
       }
     });
   }
+  void uploadAvatar(String base64Image) {
+      socket?.emit("upload_avatar", {"base64Image": base64Image});
+    }
 
 
   void joinQueue({required String language}) {
@@ -390,52 +401,60 @@ class BattleService {
   }
 
   // Helper to save data to SharedPreferences and update memory
-  Future<void> _saveUserData(Map data) async {
+Future<void> _saveUserData(Map data) async {
     final prefs = await SharedPreferences.getInstance();
-
-    // Only store token when it's actually present (login/register)
+ 
     if (data["token"] != null) {
       await prefs.setString("auth_token", data["token"]);
     }
-
-    // Base rating
+ 
     final rawRating = data["rating"];
     final baseRating = rawRating is int
         ? rawRating
         : int.tryParse(rawRating?.toString() ?? "") ?? 1000;
-
-    // Optional per-language ratings from server
-    final Map<String, int> ratings = {};
+ 
+    final Map<String, int?> ratings = {};
     final rawRatings = data["ratings"];
     if (rawRatings is Map) {
       rawRatings.forEach((key, value) {
-        if (value is int) {
+        if (value == null) {
+          ratings[key.toString()] = null;
+        } else if (value is int) {
           ratings[key.toString()] = value;
         } else {
           final parsed = int.tryParse(value.toString());
-          if (parsed != null) ratings[key.toString()] = parsed;
+          ratings[key.toString()] = parsed;
         }
       });
     }
-
-    // If none provided, default all languages to base rating
     if (ratings.isEmpty) {
       ratings["english"] = baseRating;
       ratings["german"] = baseRating;
       ratings["french"] = baseRating;
     }
-
+ 
     final rawFriendsCount = data["friendsCount"];
     final friendsCount = rawFriendsCount is int
         ? rawFriendsCount
         : int.tryParse(rawFriendsCount?.toString() ?? "") ?? 0;
-
+ 
+    DateTime? createdAt;
+    final rawCreatedAt = data["createdAt"];
+    if (rawCreatedAt is String) createdAt = DateTime.tryParse(rawCreatedAt);
+ 
+    DateTime? lastSeen;
+    final rawLastSeen = data["lastSeen"];
+    if (rawLastSeen is String) lastSeen = DateTime.tryParse(rawLastSeen);
+ 
     currentUser = UserSession(
       userId: data["userId"].toString(),
       name: data["name"] ?? "",
       rating: baseRating,
       ratings: ratings,
       friendsCount: friendsCount,
+      createdAt: createdAt,
+      lastSeen: lastSeen,
+      avatarBase64: data["avatarBase64"]?.toString(),
     );
   }
 
@@ -500,66 +519,98 @@ class UserSession {
   final String userId;
   final String name;
   final int rating;
-  final Map<String, int> ratings;
-   final int friendsCount;
-
+  final Map<String, int?> ratings;
+  final int friendsCount;
+  final DateTime? createdAt;
+  final DateTime? lastSeen;
+  final String? avatarBase64;
+ 
   UserSession({
     required this.userId,
     required this.name,
     required this.rating,
     required this.ratings,
     this.friendsCount = 0,
+    this.createdAt,
+    this.lastSeen,
+    this.avatarBase64,
   });
-
-  int ratingForLanguage(String languageKey) {
+ 
+  int? ratingForLanguage(String languageKey) {
     final key = languageKey.toLowerCase();
-    return ratings[key] ?? rating;
+    return ratings[key];
   }
-
-  // Factory needed for restoring from SharedPreferences
+ 
   factory UserSession.fromJson(Map<String, dynamic> json) {
     final rawRating = json['rating'];
     final baseRating = rawRating is int
         ? rawRating
-        : int.tryParse(rawRating?.toString() ?? "") ?? 1000;
-
-    final Map<String, int> ratings = {};
+        : int.tryParse(rawRating?.toString() ?? '') ?? 1000;
+ 
+    final Map<String, int?> ratings = {};
     final rawRatings = json['ratings'];
     if (rawRatings is Map) {
       rawRatings.forEach((key, value) {
-        if (value is int) {
+        if (value == null) {
+          ratings[key.toString()] = null;
+        } else if (value is int) {
           ratings[key.toString()] = value;
         } else {
           final parsed = int.tryParse(value.toString());
-          if (parsed != null) ratings[key.toString()] = parsed;
+          ratings[key.toString()] = parsed;
         }
       });
     }
     if (ratings.isEmpty) {
-      ratings["english"] = baseRating;
-      ratings["german"] = baseRating;
-      ratings["french"] = baseRating;
+      ratings['english'] = baseRating;
+      ratings['german'] = baseRating;
+      ratings['french'] = baseRating;
     }
-
+ 
     final rawFriendsCount = json['friendsCount'];
     final friendsCount = rawFriendsCount is int
         ? rawFriendsCount
-        : int.tryParse(rawFriendsCount?.toString() ?? "") ?? 0;
-
+        : int.tryParse(rawFriendsCount?.toString() ?? '') ?? 0;
+ 
+    DateTime? createdAt;
+    final rawCreatedAt = json['createdAt'];
+    if (rawCreatedAt is String) {
+      createdAt = DateTime.tryParse(rawCreatedAt);
+    } else if (rawCreatedAt is Map) {
+      // MongoDB date objects sometimes come as { $date: "..." }
+      createdAt = DateTime.tryParse(
+          rawCreatedAt['\$date']?.toString() ?? '');
+    }
+ 
+    DateTime? lastSeen;
+    final rawLastSeen = json['lastSeen'];
+    if (rawLastSeen is String) {
+      lastSeen = DateTime.tryParse(rawLastSeen);
+    } else if (rawLastSeen is Map) {
+      lastSeen =
+          DateTime.tryParse(rawLastSeen['\$date']?.toString() ?? '');
+    }
+ 
     return UserSession(
       userId: json['userId'].toString(),
       name: json['name'] ?? 'Unknown',
       rating: baseRating,
       ratings: ratings,
       friendsCount: friendsCount,
+      createdAt: createdAt,
+      lastSeen: lastSeen,
+      avatarBase64: json['avatarBase64']?.toString(),
     );
   }
-
+ 
   UserSession copyWith({
     String? name,
     int? rating,
-    Map<String, int>? ratings,
+    Map<String, int?>? ratings,
     int? friendsCount,
+    DateTime? createdAt,
+    DateTime? lastSeen,
+    String? avatarBase64,
   }) {
     return UserSession(
       userId: userId,
@@ -567,6 +618,10 @@ class UserSession {
       rating: rating ?? this.rating,
       ratings: ratings ?? this.ratings,
       friendsCount: friendsCount ?? this.friendsCount,
+      createdAt: createdAt ?? this.createdAt,
+      lastSeen: lastSeen ?? this.lastSeen,
+      avatarBase64: avatarBase64 ?? this.avatarBase64,
+
     );
   }
 }

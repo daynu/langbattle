@@ -3,8 +3,9 @@ import 'package:langbattle/data/notifiers.dart';
 import 'dart:async';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/views/pages/battle_page.dart';
-import 'package:langbattle/views/pages/profile_page.dart';
+import 'package:langbattle/views/pages/profile/profile_page.dart';
 import 'package:langbattle/views/pages/notifications_page.dart';
+import 'package:langbattle/widgets/user_avatar.dart';
 import 'package:lottie/lottie.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -125,10 +126,12 @@ if (!filteredLanguages.any((e) => e.key == selectedLanguage)) {
                       },
                       child: Row(
                         children: [
-                          const CircleAvatar(
-                            radius: 20,
-                            child: Icon(Icons.person),
-                          ),
+                          UserAvatar(
+                          name: currentUser?.name ?? '',
+                          base64Image: currentUser?.avatarBase64,
+                          size: 40,
+                          borderRadius: 8,
+                        ),
                           const SizedBox(width: 8),
                           Text(
                             currentUser?.name ?? "Profile",

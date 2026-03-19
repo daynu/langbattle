@@ -40,6 +40,10 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
       }
     });
     widget.battleService.requestFriendsList();
+    for (var friend in widget.battleService.friends) {
+      print("Friend: ${friend.name}, Avatar: ${friend.avatarBase64 != null ? 'Yes' : 'No'}");
+    }
+
   }
 
   @override
@@ -141,7 +145,12 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
       itemBuilder: (context, index) {
         final friend = friends[index];
         return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.person)),
+          leading: UserAvatar(
+  name: friend.name,
+  base64Image: friend.avatarBase64,
+  size: 40,
+  borderRadius: 8,
+),
           title: Text(friend.name),
           subtitle: Text('Rating: ${friend.rating}'),
           trailing: IconButton(

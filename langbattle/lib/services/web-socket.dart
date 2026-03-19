@@ -630,11 +630,13 @@ class FriendInfo {
   final String userId;
   final String name;
   final int rating;
+  final String? avatarBase64;
 
   FriendInfo({
     required this.userId,
     required this.name,
     required this.rating,
+    this.avatarBase64,
   });
 
   factory FriendInfo.fromJson(Map<String, dynamic> json) {
@@ -647,6 +649,7 @@ class FriendInfo {
       userId: json['userId'].toString(),
       name: json['name'] ?? 'Unknown',
       rating: rating,
+      avatarBase64: json['avatarBase64'] as String?,
     );
   }
 }

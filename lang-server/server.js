@@ -182,8 +182,8 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("match_found", {
         roomId,
         players: [
-          { id: p1.id, name: p1.userName },
-          { id: p2.id, name: p2.userName }
+          { id: p1.id, name: p1.userName, avatarBase64: p1.avatarBase64 ?? null },
+          { id: p2.id, name: p2.userName, avatarBase64: p2.avatarBase64 ?? null }
         ],
         ...questionsPayload
       });
@@ -481,7 +481,7 @@ if (payload.action === "finish" || payload.action === "finished") {
       // Fetch a limited number of candidates by name
       const candidates = await users
         .find({ name: regex })
-        .project({ name: 1, rating: 1, friends: 1 })
+        .project({ name: 1, rating: 1, friends: 1 , avatarBase64: 1 })
         .limit(50)
         .toArray();
 
@@ -549,7 +549,7 @@ if (payload.action === "finish" || payload.action === "finished") {
       const fromIds = pending.map((r) => r.from);
       const senders = await users
         .find({ _id: { $in: fromIds } })
-        .project({ name: 1, rating: 1 })
+        .project({ name: 1, rating: 1, avatarBase64: 1 })
         .toArray();
       const sendersById = new Map(
         senders.map((u) => [u._id.toString(), u])
@@ -767,7 +767,7 @@ if (payload.action === "finish" || payload.action === "finished") {
 
       const friendsDocs = await users
         .find({ _id: { $in: friendsIds } })
-        .project({ name: 1, rating: 1 })
+        .project({ name: 1, rating: 1, avatarBase64: 1 })
         .toArray();
 
       socket.emit("friends_list", {
@@ -776,6 +776,7 @@ if (payload.action === "finish" || payload.action === "finished") {
           name: u.name,
           rating:
             typeof u.rating === "number" && !isNaN(u.rating) ? u.rating : 1000,
+          avatarBase64: u.avatarBase64 ?? null
         })),
         friendsCount: friendsDocs.length,
       });
@@ -860,6 +861,7 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
     socket.userId = user._id;
     socket.userName = user.name;
+    socket.avatarBase64 = user.avatarBase64 ?? null;
     const baseRating =
       typeof user.rating === "number" && !isNaN(user.rating)
         ? user.rating
@@ -942,6 +944,7 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
     socket.userId = user._id;
     socket.userName = user.name;
+    socket.avatarBase64 = user.avatarBase64 ?? null;
     const baseRating =
       typeof user.rating === "number" && !isNaN(user.rating)
         ? user.rating
@@ -1010,8 +1013,8 @@ async function resolveRoom(roomId) {
 
       await db.collection("games").insertOne({
         players: [
-          { userId: p1.userId, name: p1.userName, score: s1, ratingBefore: r1, ratingAfter: newA },
-          { userId: p2.userId, name: p2.userName, score: s2, ratingBefore: r2, ratingAfter: newB },
+          { userId: p1.userId, name: p1.userName, score: s1, ratingBefore: r1, ratingAfter: newA, avatarBase64: p1.avatarBase64 ?? null },
+          { userId: p2.userId, name: p2.userName, score: s2, ratingBefore: r2, ratingAfter: newB, avatarBase64: p2.avatarBase64 ?? null },
         ],
         language: langKey,
         level: ratingToLevel(Math.round((r1 + r2) / 2)),

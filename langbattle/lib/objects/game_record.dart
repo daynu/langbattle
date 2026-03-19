@@ -4,6 +4,7 @@ class GamePlayerRecord {
   final int score;
   final int ratingBefore;
   final int ratingAfter;
+  final String? avatarBase64;
 
   GamePlayerRecord({
     required this.userId,
@@ -11,6 +12,7 @@ class GamePlayerRecord {
     required this.score,
     required this.ratingBefore,
     required this.ratingAfter,
+    this.avatarBase64,
   });
 
   factory GamePlayerRecord.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class GamePlayerRecord {
       score: (json['score'] as num?)?.toInt() ?? 0,
       ratingBefore: (json['ratingBefore'] as num?)?.toInt() ?? 1000,
       ratingAfter: (json['ratingAfter'] as num?)?.toInt() ?? 1000,
+      avatarBase64: json['avatarBase64'] as String?,
     );
   }
 }

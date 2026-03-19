@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:langbattle/objects/game_record.dart';
+import 'package:langbattle/widgets/user_avatar.dart';
 
 class GameTileCompact extends StatelessWidget {
   final GameRecord game;
@@ -52,6 +53,12 @@ class GameTileCompact extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                UserAvatar(
+                  name: opp.name,
+                  base64Image: opp.avatarBase64,
+                  size: 32,
+                  borderRadius: 6,
+                ),
                 Text(
                   opp.name,
                   style: theme.textTheme.bodyMedium

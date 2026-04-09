@@ -9,6 +9,8 @@ class BattleService {
   List<FriendInfo> friends = [];
   List<PlayerSearchResult> searchResults = [];
   List<FriendRequestNotification> friendRequests = [];
+  Map<String, dynamic>? activeRoom;
+  int onlineCount = 0;
 
   final _controller = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get stream => _controller.stream;
@@ -46,6 +48,26 @@ class BattleService {
       "language": data["language"],
       "history": data["history"] ?? [],
     });
+  });
+
+  socket!.on("online_count", (data) {
+  onlineCount = data["count"] ?? 0;
+  print("Online count received : $onlineCount");
+  _controller.add({"type": "online_count"});
+});
+
+
+  socket!.on("active_room", (data) {
+    activeRoom = data["room"]; // save it
+    _controller.add({"type": "active_room", "room": data["room"]});
+  });
+
+  socket!.on("room_expired", (_) {
+    _controller.add({"type": "room_expired"});
+  });
+
+  socket!.on("opponent_reconnected", (_) {
+    _controller.add({"type": "opponent_reconnected"});
   });
 
     socket!.on("game_history", (data) {
@@ -399,6 +421,15 @@ class BattleService {
       "action": action,
     });
   }
+
+  void requestActiveRoom() {
+  socket?.emit("get_active_room");
+}
+
+void rejoinRoom(String roomId) {
+  this.roomId = roomId;
+  socket?.emit("rejoin_room", {"roomId": roomId});
+}
 
   // Helper to save data to SharedPreferences and update memory
 Future<void> _saveUserData(Map data) async {

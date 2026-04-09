@@ -8,12 +8,14 @@ class RootScreen extends StatefulWidget {
   final String? token;
   const RootScreen({super.key, required this.battleService, this.token});
 
+
   @override
   State<RootScreen> createState() => _RootScreenState();
 }
 
 class _RootScreenState extends State<RootScreen> {
   bool? isAuthenticated; 
+  bool _checkingActiveRoom = false; // Flag to prevent multiple active room checks
 
   @override
   void initState() {
@@ -22,7 +24,12 @@ class _RootScreenState extends State<RootScreen> {
 
     widget.battleService.stream.listen((event) {
       if (event["type"] == "auth_success") {
-        setState(() => isAuthenticated = true);
+        setState(()
+         {
+          isAuthenticated = true;
+          _checkingActiveRoom = true; // Reset flag on successful auth
+          });
+      widget.battleService.requestActiveRoom(); // Check for active room immediately after auth
       }
       if (event["type"] == "auth_failed") {
         setState(() => isAuthenticated = false);

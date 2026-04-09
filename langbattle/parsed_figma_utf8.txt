@@ -1,0 +1,109 @@
+- Page 1
+  - Body
+    Fills: [{'r': 0.9686274528503418, 'g': 0.9686274528503418, 'b': 0.9490196108818054, 'a': 1.0}]
+    - Footer
+      - Button
+        Fills: [{'r': 0.1764705926179886, 'g': 0.18431372940540314, 'b': 0.1725490242242813, 'a': 1.0}]
+        - Container
+          - Container
+            - Icon
+              Fills: [{'r': 0.9725490212440491, 'g': 0.4431372582912445, 'b': 0.4431372582912445, 'a': 1.0}]
+          - Text
+            Text: CANCEL SEARCH
+            Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Extra Bold', 'fontWeight': 900, 'fontSize': 18.0, 'textAlignHorizontal': 'CENTER', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.0, 'lineHeightPx': 28.0, 'lineHeightPercent': 123.456787109375, 'lineHeightPercentFontSize': 155.55555725097656, 'lineHeightUnit': 'PIXELS'}
+            Fills: [{'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}]
+        - Container
+          - Text
+            Text: Return to Lobby
+            Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Bold', 'fontWeight': 700, 'textCase': 'UPPER', 'fontSize': 10.0, 'textAlignHorizontal': 'CENTER', 'textAlignVertical': 'CENTER', 'letterSpacing': 2.0, 'lineHeightPx': 28.0, 'lineHeightPercent': 222.2222137451172, 'lineHeightPercentFontSize': 280.0, 'lineHeightUnit': 'PIXELS'}
+            Fills: [{'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}]
+    - Main
+      - Margin
+        - Background+Border
+          Fills: [{'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}]
+          - Overlay+Shadow
+            Fills: [{'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}]
+          - Container
+            - Margin
+              - Overlay
+                Fills: [{'r': 0.4588235318660736, 'g': 0.34117648005485535, 'b': 0.0, 'a': 1.0}]
+                - Container
+                  - Icon
+                    Fills: [{'r': 0.4588235318660736, 'g': 0.34117648005485535, 'b': 0.0, 'a': 1.0}]
+                - Container
+                  - Text
+                    Text: Spanish Battle
+                    Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Extra Bold', 'fontWeight': 800, 'textCase': 'UPPER', 'fontSize': 12.0, 'textAlignHorizontal': 'CENTER', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.6000000238418579, 'lineHeightPx': 16.0, 'lineHeightPercent': 105.82010650634766, 'lineHeightPercentFontSize': 133.3333282470703, 'lineHeightUnit': 'PIXELS'}
+                    Fills: [{'r': 0.4588235318660736, 'g': 0.34117648005485535, 'b': 0.0, 'a': 1.0}]
+            - Heading 2:margin
+              - Heading 2
+                - Text
+                  Text: 00:12
+                  Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Extra Bold', 'fontWeight': 800, 'fontSize': 60.0, 'textAlignHorizontal': 'CENTER', 'textAlignVertical': 'CENTER', 'letterSpacing': -3.0, 'lineHeightPx': 60.0, 'lineHeightPercent': 79.36508178710938, 'lineHeightPercentFontSize': 100.0, 'lineHeightUnit': 'PIXELS'}
+                  Fills: [{'r': 0.1764705926179886, 'g': 0.18431372940540314, 'b': 0.1725490242242813, 'a': 1.0}]
+            - Container
+              - Background
+                Fills: [{'r': 0.6705882549285889, 'g': 0.1764705926179886, 'b': 0.0, 'a': 1.0}]
+              - Container
+                - Searching for A Match...
+                  Text: Searching for A Match...
+                  Style: {'fontFamily': 'Be Vietnam Pro', 'fontPostScriptName': None, 'fontStyle': 'Bold', 'fontWeight': 700, 'textCase': 'UPPER', 'fontSize': 10.0, 'textAlignHorizontal': 'CENTER', 'textAlignVertical': 'CENTER', 'letterSpacing': 1.0, 'lineHeightPx': 15.0, 'lineHeightPercent': 118.57707214355469, 'lineHeightPercentFontSize': 150.0, 'lineHeightUnit': 'PIXELS'}
+                  Fills: [{'r': 0.3529411852359772, 'g': 0.3607843220233917, 'b': 0.3450980484485626, 'a': 1.0}]
+      - Margin
+        - Container
+          - Overlay+Border
+            Fills: [{'r': 0.9450980424880981, 'g': 0.9450980424880981, 'b': 0.9254902005195618, 'a': 1.0}]
+            - Background
+              Fills: [{'r': 0.886274516582489, 'g': 0.8901960849761963, 'b': 0.8666666746139526, 'a': 1.0}]
+              - Container
+                - Icon
+                  Fills: [{'r': 0.4588235318660736, 'g': 0.34117648005485535, 'b': 0.0, 'a': 1.0}]
+            - Container
+              - Container
+                - Text
+                  Text: Online
+                  Style: {'fontFamily': 'Be Vietnam Pro', 'fontPostScriptName': None, 'fontStyle': 'Bold', 'fontWeight': 700, 'textCase': 'UPPER', 'fontSize': 9.0, 'textAlignHorizontal': 'LEFT', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.44999998807907104, 'lineHeightPx': 9.0, 'lineHeightPercent': 79.05138397216797, 'lineHeightPercentFontSize': 100.0, 'lineHeightUnit': 'PIXELS'}
+                  Fills: [{'r': 0.3529411852359772, 'g': 0.3607843220233917, 'b': 0.3450980484485626, 'a': 1.0}]
+              - Container
+                - Text
+                  Text: 12,482
+                  Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Extra Bold', 'fontWeight': 800, 'fontSize': 14.0, 'textAlignHorizontal': 'LEFT', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.0, 'lineHeightPx': 20.0, 'lineHeightPercent': 113.37869262695312, 'lineHeightPercentFontSize': 142.85714721679688, 'lineHeightUnit': 'PIXELS'}
+                  Fills: [{'r': 0.1764705926179886, 'g': 0.18431372940540314, 'b': 0.1725490242242813, 'a': 1.0}]
+      - Container
+        - Container
+          - Background+Border+Shadow
+            Fills: [{'r': 1.0, 'g': 1.0, 'b': 1.0, 'a': 1.0}]
+            - User PFP
+          - Container
+            - Text
+              Text: Alex R.
+              Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Bold', 'fontWeight': 700, 'fontSize': 14.0, 'textAlignHorizontal': 'LEFT', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.0, 'lineHeightPx': 20.0, 'lineHeightPercent': 113.37869262695312, 'lineHeightPercentFontSize': 142.85714721679688, 'lineHeightUnit': 'PIXELS'}
+              Fills: [{'r': 0.1764705926179886, 'g': 0.18431372940540314, 'b': 0.1725490242242813, 'a': 1.0}]
+        - Container
+          - Container
+            - Background
+              Fills: [{'r': 0.9921568632125854, 'g': 0.7529411911964417, 'b': 0.0117647061124444, 'a': 1.0}]
+          - Background+Shadow
+            Fills: [{'r': 0.9921568632125854, 'g': 0.7529411911964417, 'b': 0.0117647061124444, 'a': 1.0}]
+            - Container
+              - Icon
+                Fills: [{'r': 0.3333333432674408, 'g': 0.24313725531101227, 'b': 0.0, 'a': 1.0}]
+        - Container
+          - Background+Border
+            Fills: [{'r': 0.886274516582489, 'g': 0.8901960849761963, 'b': 0.8666666746139526, 'a': 1.0}]
+            - Container
+              - Icon
+                Fills: [{'r': 0.8627451062202454, 'g': 0.8666666746139526, 'b': 0.843137264251709, 'a': 1.0}]
+            - Gradient
+          - Container
+            - Text
+              Text: Finding...
+              Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Bold', 'fontWeight': 700, 'fontSize': 14.0, 'textAlignHorizontal': 'LEFT', 'textAlignVertical': 'CENTER', 'letterSpacing': 0.0, 'lineHeightPx': 20.0, 'lineHeightPercent': 113.37869262695312, 'lineHeightPercentFontSize': 142.85714721679688, 'lineHeightUnit': 'PIXELS'}
+              Fills: [{'r': 0.8627451062202454, 'g': 0.8666666746139526, 'b': 0.843137264251709, 'a': 1.0}]
+  - Header
+    Fills: [{'r': 0.9686274528503418, 'g': 0.9686274528503418, 'b': 0.9490196108818054, 'a': 1.0}]
+    - Heading 1
+      - Text
+        Text: Langbattle
+        Style: {'fontFamily': 'Plus Jakarta Sans', 'fontPostScriptName': None, 'fontStyle': 'Extra Bold', 'fontWeight': 800, 'fontSize': 20.0, 'textAlignHorizontal': 'LEFT', 'textAlignVertical': 'CENTER', 'letterSpacing': -0.5, 'lineHeightPx': 28.0, 'lineHeightPercent': 111.1111068725586, 'lineHeightPercentFontSize': 140.0, 'lineHeightUnit': 'PIXELS'}
+        Fills: [{'r': 0.4588235318660736, 'g': 0.34117648005485535, 'b': 0.0, 'a': 1.0}]

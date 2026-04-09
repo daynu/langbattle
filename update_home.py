@@ -1,162 +1,11 @@
-import "package:flutter/material.dart";
-import 'package:langbattle/views/pages/friends_page.dart';
-import 'package:langbattle/views/pages/settings_page.dart';
-import 'package:langbattle/data/notifiers.dart';
-import 'package:langbattle/objects/question.dart';
-import 'dart:async';
-import 'package:langbattle/services/web-socket.dart';
-import 'package:langbattle/views/pages/battle_page.dart';
-import 'package:langbattle/views/pages/profile/profile_page.dart';
-import 'package:langbattle/views/pages/notifications_page.dart';
-import 'package:langbattle/widgets/user_avatar.dart';
-import 'package:lottie/lottie.dart';
-import 'package:langbattle/extensions/context_extensions.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:langbattle/data/constants.dart';
+import re
 
+with open(r"c:\Users\danu1\OneDrive\Documents\LangBattle\langbattle\lib\views\pages\home_page.dart", "r", encoding="utf8") as f:
+    content = f.read()
 
+prefix = content.split("  @override\n  Widget build(BuildContext context) {")[0]
 
-class HomePage extends StatefulWidget {
-  
-  final BattleService battleService;
-  const HomePage({super.key, required this.battleService});
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  double imgSize = 200;
-  String selectedLanguage = "english";
-  StreamSubscription<Map<String, dynamic>>? _sub;
-
-  static const Map<String, String> languageLabels = {
-    "english": "languageEnglish",
-    "german": "languageGerman",
-    "french": "languageFrench",
-    "romanian": "languageRomanian",
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedLanguage();
-    _sub = widget.battleService.stream.listen((event) {
-      final type = event["type"];
-      if (!mounted) return;
-      if (type == "friend_requests" ||
-          type == "friend_request_created" ||
-          type == "friend_request_updated" ||
-          type == "friend_added"||
-          type == "active_room" || type == "online_count" 
-          ) {
-        setState(() {});
-      }
-
-      
-
-    });
-    widget.battleService.requestFriendRequests();
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  Widget _buildActiveGameBanner(BuildContext context) {
-  final room = widget.battleService.activeRoom!;
-  final opponentName = room["opponentName"] ?? "Opponent";
-  final myScore = room["myScore"] ?? 0;
-  final opponentScore = room["opponentScore"] ?? 0;
-
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-      ),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      children: [
-        Icon(
-          Icons.sports_kabaddi,
-          color: Theme.of(context).colorScheme.primary,
-          size: 32,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Game in progress",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                "vs $opponentName  •  $myScore – $opponentScore",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: () => _rejoinGame(context, room),
-          child: const Text("Rejoin"),
-        ),
-      ],
-    ),
-  );
-}
-
-void _rejoinGame(BuildContext context, Map<String, dynamic> room) {
-  final questions = (room["questions"] as List)
-      .map((q) => Question.fromJson(Map<String, dynamic>.from(q)))
-      .toList();
-
-  widget.battleService.rejoinRoom(room["roomId"]);
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => BattleScreen(
-        battleService: widget.battleService,
-        language: room["language"] ?? "english",
-        restoredRoom: room,
-      ),
-    ),
-  ).then((_) {
-    // Clear the active room banner once they return from the game
-    widget.battleService.activeRoom = null;
-    setState(() {});
-  });
-}
-
-
-
-Future<void> _loadSavedLanguage() async {
-  final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getString(Kconstants.battleLanguageKey);
-  final uiLocale = localeNotifier.value?.languageCode ?? 'en';
-  final localeMap = {'english': 'en', 'german': 'de', 'french': 'fr', 'romanian': 'ro'};
-  if (saved != null && languageLabels.containsKey(saved) && localeMap[saved] != uiLocale) {
-    setState(() => selectedLanguage = saved);
-  }
-}
-
-  @override
+build_method = """  @override
   Widget build(BuildContext context) {
     final currentUser = widget.battleService.currentUser;
     final rating = currentUser?.ratingForLanguage(selectedLanguage);
@@ -219,74 +68,47 @@ Future<void> _loadSavedLanguage() async {
                     color: Color(0xFF755700),
                   ),
                 ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsPage(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1EC), // surface-container-low
-                          borderRadius: BorderRadius.circular(12),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotificationsPage(
+                          battleService: widget.battleService,
                         ),
-                        child: const Icon(
-                          Icons.settings_outlined,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F1EC), // surface-container-low
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.notifications_outlined,
                           color: Color(0xFF755700),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NotificationsPage(
-                              battleService: widget.battleService,
+                        if (hasNotifications)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1EC), // surface-container-low
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(
-                              Icons.notifications_outlined,
-                              color: Color(0xFF755700),
-                            ),
-                            if (hasNotifications)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -368,11 +190,71 @@ Future<void> _loadSavedLanguage() async {
                               color: Color(0xFF2D2F2C),
                             ),
                           ),
+                          Text(
+                            "@${(currentUser?.name ?? "Guest").replaceAll(' ', '_')}",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Color(0xFF5A5C58), // on-surface-variant
+                            ),
+                          ),
                           const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFDC003).withOpacity(0.2), // primary-container
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  "LEVEL ${(rating ?? 1000) ~/ 100}",
+                                  style: const TextStyle(
+                                    color: Color(0xFF755700),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0D6661),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Text(
+                                    "ACTIVE NOW",
+                                    style: TextStyle(
+                                      color: Color(0xFF0D6661),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            ],
+                          )
                         ],
                       ),
                     ),
-
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1EC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.edit_outlined, color: Color(0xFF767773)),
+                    )
                   ],
                 ),
               ),
@@ -597,7 +479,24 @@ Future<void> _loadSavedLanguage() async {
               ),
               child: Column(
                 children: [
-                  
+                  const Text(
+                    "Ready for Battle?",
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w900,
+                      fontSize: 28,
+                      color: Color(0xFF2D2F2C),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Challenge a random opponent and climb the leaderboard.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF5A5C58),
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -608,7 +507,7 @@ Future<void> _loadSavedLanguage() async {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      minimumSize: const Size(double.infinity, 64),
+                      minimumSize: const Size(Double.infinity, 64),
                     ),
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) {
@@ -636,9 +535,9 @@ Future<void> _loadSavedLanguage() async {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    "${widget.battleService.onlineCount} Players Online Now",
-                    style: const TextStyle(
+                  const Text(
+                    "4,281 Players Online Now",
+                    style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF5A5C58),
@@ -648,11 +547,96 @@ Future<void> _loadSavedLanguage() async {
                 ],
               ),
             ),
-            
-           
+            const SizedBox(height: 32),
+
+            // Secondary Actions
+            GestureDetector(
+              onTap: () {
+                // Placeholder for Practice Arena
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EC),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA7F3EC), // tertiary-container
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.school, color: Color(0xFF005E59)), // on-tertiary-container
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("Practice Arena", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D2F2C), fontSize: 16)),
+                          Text("Solo training against AI bots", style: TextStyle(color: Color(0xFF5A5C58), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Color(0xFF767773)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                 Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                     builder: (context) => FriendsPage(battleService: widget.battleService),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EC),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC4B4), // secondary-container
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.group, color: Color(0xFF882200)), // on-secondary-container
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text("Friends League", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D2F2C), fontSize: 16)),
+                          Text("Compete with your social circle", style: TextStyle(color: Color(0xFF5A5C58), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Color(0xFF767773)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+"""
+
+final_content = prefix + build_method
+
+with open(r"c:\Users\danu1\OneDrive\Documents\LangBattle\langbattle\lib\views\pages\home_page.dart", "w", encoding="utf8") as f:
+    f.write(final_content)

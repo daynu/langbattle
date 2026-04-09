@@ -1,0 +1,45 @@
+Analyzing langbattle...                                         
+
+   info - Don't invoke 'print' in production code - lib\main.dart:21:3 - avoid_print
+   info - The file name 'web-socket.dart' isn't a lower_case_with_underscores identifier - lib\services\web-socket.dart:1:1 - file_names
+   info - The prefix 'IO' isn't a lower_case_with_underscores identifier - lib\services\web-socket.dart:2:60 - library_prefixes
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:33:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:284:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:297:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:341:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:346:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:358:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:360:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:490:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\web-socket.dart:505:5 - avoid_print
+   info - Invalid use of a private type in a public API - lib\views\pages\battle_page.dart:23:3 - library_private_types_in_public_api
+   info - Don't invoke 'print' in production code - lib\views\pages\battle_page.dart:99:9 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:75:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:104:75 - deprecated_member_use
+warning - The value of the local variable 'questions' isn't used - lib\views\pages\home_page.dart:121:9 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:281:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:297:79 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:357:66 - deprecated_member_use
+   info - Use interpolation to compose strings and values - lib\views\pages\home_page.dart:504:29 - prefer_interpolation_to_compose_strings
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:618:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\home_page.dart:621:52 - deprecated_member_use
+  error - Invalid constant value - lib\views\pages\home_page.dart:657:47 - invalid_constant
+  error - Undefined name 'Double' - lib\views\pages\home_page.dart:657:47 - undefined_identifier
+   info - Constructors in '@immutable' classes should be declared as 'const' - lib\views\pages\login_page.dart:11:3 - prefer_const_constructors_in_immutables
+warning - The value of the field '_sub' isn't used - lib\views\pages\login_page.dart:21:33 - unused_field
+   info - The file name 'onboarding-language-page.dart' isn't a lower_case_with_underscores identifier - lib\views\pages\onboarding-language-page.dart:1:1 - file_names
+   info - Don't invoke 'print' in production code - lib\views\pages\profile\profile_friends_tab.dart:44:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\profile\profile_statistics_tab.dart:365:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\profile\profile_statistics_tab.dart:433:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\rating_history_page.dart:281:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\rating_history_page.dart:347:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\rating_history_page.dart:383:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\pages\rating_history_page.dart:384:41 - deprecated_member_use
+warning - Unused import: 'dart:io' - lib\views\pages\settings_page.dart:3:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\views\pages\settings_page.dart:139:7 - avoid_print
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\pages\settings_page.dart:337:23 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\views\pages\settings_page.dart:338:23 - deprecated_member_use
+   info - The file name 'rootScreen.dart' isn't a lower_case_with_underscores identifier - lib\views\rootScreen.dart:1:1 - file_names
+warning - The value of the field '_checkingActiveRoom' isn't used - lib\views\rootScreen.dart:18:8 - unused_field
+  error - The named parameter 'battleService' is required, but there's no corresponding argument - test\widget_test.dart:16:35 - missing_required_argument
+

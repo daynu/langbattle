@@ -57,6 +57,10 @@ function trackSocketForUser(socket) {
   set.add(socket.id);
 }
 
+function getOnlineCount()
+{
+  return userSockets.size;
+}
 function untrackSocketForUser(socket) {
   if (!socket.userId) return;
   const key = socket.userId.toString();
@@ -177,6 +181,23 @@ io.on("connection", (socket) => {
         ),
 };
 
+          await db.collection("active_rooms").insertOne({
+            roomId,
+            players: [
+              { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0 },
+              { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0 },
+            ],
+            questions: questionsPayload.questions,
+            currentIndexes: {
+              [p1.userId.toString()]: 0,
+              [p2.userId.toString()]: 0,
+            },
+            finished: [],
+            language,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min TTL
+          });
+
       console.log("Match created:", roomId, "questions:", questionsPayload.questions.length);
 
       io.to(roomId).emit("match_found", {
@@ -211,40 +232,75 @@ io.on("connection", (socket) => {
   }
 });
 
-  // Relay player actions (answers, moves, etc.)
-socket.on("player_event", async (data) => {
-  const { roomId, payload } = data;
-  const room = rooms[roomId];
-  if (!room) return;
 
-  if (payload.action === "answer") {
-    const correctAnswers = room.questions?.[payload.questionId];
-    const submitted = Array.isArray(payload.answer) ? payload.answer : [payload.answer];
-    const correct = JSON.stringify(submitted) === JSON.stringify(correctAnswers);
+    socket.on("get_active_room", async () => {
+    if (!socket.userId) return socket.emit("active_room", { room: null });
 
-    // Server increments score — client no longer decides this
-    if (correct) {
-      room.scores[socket.id] = (room.scores[socket.id] ?? 0) + 1;
-    }
-
-    // Broadcast to both players with validated result
-    io.to(roomId).emit("player_event", {
-      ...payload,
-      correct,
+    const userId = socket.userId.toString();
+    const room = await db.collection("active_rooms").findOne({
+      "players.userId": userId,
+      finished: { $not: { $all: [] } }, 
+      expiresAt: { $gt: new Date() },
     });
-    return;
-  }
 
-if (payload.action === "finish" || payload.action === "finished") {
-  room.finished.add(socket.id);
-  io.to(roomId).emit("player_event", payload);
+    if (!room) return socket.emit("active_room", { room: null });
 
-  if (room.finished.size >= 2) {
-    await resolveRoom(roomId); 
-  }
-}
+    const me = room.players.find(p => p.userId === userId);
+    const opponent = room.players.find(p => p.userId !== userId);
+
+    socket.emit("active_room", {
+      room: {
+        roomId: room.roomId,
+        questions: room.questions,
+        myScore: me?.score ?? 0,
+        opponentScore: opponent?.score ?? 0,
+        opponentName: opponent?.name ?? "Opponent",
+        myCurrentIndex: room.currentIndexes?.[userId] ?? 0,
+        opponentFinished: room.finished?.includes(opponent?.userId),
+      },
+    });
+  });
+
+  socket.on("rejoin_room", async ({ roomId }) => {
+  const room = await db.collection("active_rooms").findOne({ roomId });
+  if (!room) return socket.emit("room_expired");
+
+  socket.join(roomId);
+  socket.battleService_roomId = roomId; // track for disconnect cleanup
+
+  // Let the opponent know this player reconnected
+  socket.to(roomId).emit("opponent_reconnected");
 });
 
+  // Relay player actions (answers, moves, etc.)
+socket.on("player_event", async (data) => {
+  io.to(data.roomId).emit("player_event", data.payload);
+
+  // Persist progress
+  if (data.payload?.action === "answer" && socket.userId) {
+    const userId = socket.userId.toString();
+    await db.collection("active_rooms").updateOne(
+      { roomId: data.roomId },
+      {
+        $inc: { [`scores.${userId}`]: 1 },
+        $set: { [`currentIndexes.${userId}`]: data.payload.questionIndex ?? 0 },
+      }
+    );
+  }
+
+  if (data.payload?.action === "finish" && socket.userId) {
+    const userId = socket.userId.toString();
+    await db.collection("active_rooms").updateOne(
+      { roomId: data.roomId },
+      { $addToSet: { finished: userId } }
+    );
+    // Clean up when both finished
+    const room = await db.collection("active_rooms").findOne({ roomId: data.roomId });
+    if (room?.finished?.length >= 2) {
+      await db.collection("active_rooms").deleteOne({ roomId: data.roomId });
+    }
+  }
+});
   // Friends: send a friend request by email or userId
   socket.on("add_friend", async ({ email, userId }) => {
     try {
@@ -861,6 +917,10 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
     socket.userId = user._id;
     socket.userName = user.name;
+
+    trackSocketForUser(socket);
+    io.emit('online_count', { count: getOnlineCount() });
+
     socket.avatarBase64 = user.avatarBase64 ?? null;
     const baseRating =
       typeof user.rating === "number" && !isNaN(user.rating)
@@ -899,6 +959,7 @@ socket.on("register", async ({ email, password, name, language, startingRating }
   // Handle disconnect
   socket.on("disconnect", () => {
   untrackSocketForUser(socket);
+  io.emit('online_count', { count: getOnlineCount() });
 
   for (const lang of Object.keys(queuesByLanguage)) {
     queuesByLanguage[lang] = queuesByLanguage[lang].filter(s => s !== socket);
@@ -959,11 +1020,14 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
     // Track socket for notifications
     trackSocketForUser(socket);
+    io.emit('online_count', { count: getOnlineCount() });
+    
 
     const friendsIds = Array.isArray(user.friends) ? user.friends : [];
     const friendsCount = friendsIds.length;
 
     console.log("Auth OK for", user.name);
+    console.log(getOnlineCount(), "users online");
 
     socket.emit("auth_success", {
       userId: user._id.toString(),
@@ -973,7 +1037,8 @@ socket.on("register", async ({ email, password, name, language, startingRating }
       friendsCount,
       createdAt: user.createdAt,
       lastSeen: user.lastSeen,
-      avatarBase64: user.avatarBase64 ?? null
+      avatarBase64: user.avatarBase64 ?? null,
+      onlineCount: getOnlineCount(),
     });
   } catch (e) {
     console.error("Auth failed", e);
@@ -1041,6 +1106,7 @@ async function resolveRoom(roomId) {
 //database
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcrypt");
+const { get } = require("mongoose");
 
 const mongo_db_URI = process.env.mongo_db_URI;
 console.log("Connecting to MongoDB at", mongo_db_URI);

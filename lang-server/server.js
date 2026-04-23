@@ -4,17 +4,25 @@ dotenv.config();
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET
-const io = new Server(5000, {
-  cors: { origin: "*" },
-  methods: ["GET", "POST"],
-  maxHttpBufferSize: 2e6, 
+const http = require("http");
+const app = require("express")();
+
+const server = http.createServer(app);
+
+app.get("/", (req, res) => {
+  res.send("OK");
 });
 
-const queuesByLanguage = {
-  english: [],
-  german: [],
-  french: [],
-};
+const io = new Server(server, {
+  cors: { origin: "*" },
+  methods: ["GET", "POST"],
+  maxHttpBufferSize: 2e6,
+});
+
+const queues = {};
+function getQueueKey(language, mode) {
+  return `${language}_${mode}`;
+}
 let rooms = {};
 const userSockets = new Map();
 
@@ -25,6 +33,37 @@ function normalizeLanguage(lang) {
   if (v === "fr" || v === "french" || v === "français" || v === "francais") return "french";
   // default
   return "english";
+}
+
+const WORD_CHAIN_DURATION_SECONDS = 60;
+const WORD_CHAIN_STARTERS = {
+  english: ["apple", "ocean", "tiger", "rocket", "planet", "garden"],
+  german: ["apfel", "engel", "nacht", "tasse", "fenster", "garten"],
+  french: ["ami", "orange", "ecole", "etoile", "nature", "salade"],
+};
+
+function normalizeChainWord(word) {
+  return (word ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+}
+
+function getLastLetter(word) {
+  const letters = normalizeChainWord(word).match(/\p{L}/gu) || [];
+  return letters.length ? letters[letters.length - 1] : "";
+}
+
+function isWordChainCandidateValid(word) {
+  const normalized = normalizeChainWord(word);
+  return normalized.length >= 2 && /^\p{L}+$/u.test(normalized);
+}
+
+async function getStartWord(language) {
+  const lang = normalizeLanguage(language);
+  const starters = WORD_CHAIN_STARTERS[lang] || WORD_CHAIN_STARTERS.english;
+  return starters[Math.floor(Math.random() * starters.length)];
 }
 
 function escapeRegex(str) {
@@ -57,8 +96,7 @@ function trackSocketForUser(socket) {
   set.add(socket.id);
 }
 
-function getOnlineCount()
-{
+function getOnlineCount() {
   return userSockets.size;
 }
 function untrackSocketForUser(socket) {
@@ -91,14 +129,23 @@ io.on("connection", (socket) => {
   socket.emit("connected");
 
   // Player joins matchmaking queue
-  socket.on("join_queue", async (data = {}) => {
-    if (!socket.userName) {
+socket.on("join_queue", async (data = {}) => {
+  if (!socket.userName) {
     socket.emit("error_msg", "You must be authenticated to join the queue");
     return;
   }
 
+  const VALID_MODES = ["classic", "word_chain"];
+
+  const language = normalizeLanguage(data.language);
+  const mode = VALID_MODES.includes(data.mode) ? data.mode : "classic";
+  const queueKey = getQueueKey(language, mode);
+
+  socket.selectedLanguage = language;
+  socket.selectedMode = mode;
+
   // Prevent same user from queuing on multiple devices
-  const alreadyInQueue = Object.values(queuesByLanguage)
+  const alreadyInQueue = Object.values(queues)
     .some(q => q.some(s => s.userId?.toString() === socket.userId?.toString()));
 
   if (alreadyInQueue) {
@@ -115,46 +162,61 @@ io.on("connection", (socket) => {
     return;
   }
 
-    const language = normalizeLanguage(data.language);
-    socket.selectedLanguage = language;
+  // Remove from any previous queue
+  for (const key of Object.keys(queues)) {
+    queues[key] = queues[key].filter((s) => s !== socket);
+  }
 
-    // Remove from any previous queue (if client re-joins)
-    for (const lang of Object.keys(queuesByLanguage)) {
-      queuesByLanguage[lang] = queuesByLanguage[lang].filter((s) => s !== socket);
-    }
+  // Add to the correct queue
+  if (!queues[queueKey]) queues[queueKey] = [];
+  queues[queueKey].push(socket);
+  console.log(`Player joined queue [${queueKey}]:`, queues[queueKey].length, "user:", socket.userName);
 
-    const queue = queuesByLanguage[language] ?? (queuesByLanguage[language] = []);
-    queue.push(socket);
-    console.log("Player joined queue:", queue.length, "user:", socket.userName, "language:", language);
+  if (queues[queueKey].length >= 2) {
+    const p1 = queues[queueKey].shift();
+    const p2 = queues[queueKey].shift();
+    const roomId = Math.random().toString(36).substring(2, 8);
 
-    // Match players when we have at least 2
-    if (queue.length >= 2) {
-      const p1 = queue.shift();
-      const p2 = queue.shift();
-      const roomId = Math.random().toString(36).substring(2, 8);
-      let questionsPayload = { questions: [], language, level: "A1" };
+    p1.join(roomId);
+    p2.join(roomId);
 
-      p1.join(roomId);
-      p2.join(roomId);
+    let questionsPayload = { questions: [], language, level: "A1", mode };
 
-      
-      try {
-          const langKey = language.toLowerCase();
-          const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
-          const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
-          const avgRating = Math.round((r1 + r2) / 2);
-          const level = ratingToLevel(avgRating);
-          const result = await getRandomQuestions(language, level, 4);
-          const normalized = (result.questions || []).map((q) => {
+    try {
+      const langKey = language.toLowerCase();
+      const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
+      const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
+      const avgRating = Math.round((r1 + r2) / 2);
+      const level = ratingToLevel(avgRating);
+
+      if (mode === "word_chain") {
+        const startWord = await getStartWord(language);
+        const endsAt = new Date(Date.now() + WORD_CHAIN_DURATION_SECONDS * 1000);
+        // Word chain doesn't use the questions collection —
+        // just send the starting word and let the game drive itself
+        questionsPayload = {
+          questions: [],
+          language,
+          level,
+          mode,
+          startWord,
+          usedWords: [startWord],
+          durationSeconds: WORD_CHAIN_DURATION_SECONDS,
+          endsAt: endsAt.toISOString(),
+        };
+      } else {
+        // classic
+        const result = await getRandomQuestions(language, level, 4);
+        const normalized = (result.questions || []).map((q) => {
           const options = Array.isArray(q.options) ? q.options : [];
           const correctAnswers = Array.isArray(q.correctAnswers)
-                                ? q.correctAnswers
-                                : [q.correctAnswer ?? (q.correctIndex != null ? options[q.correctIndex] : options[0]) ?? ''];
+            ? q.correctAnswers
+            : [q.correctAnswer ?? (q.correctIndex != null ? options[q.correctIndex] : options[0]) ?? ''];
 
           return {
             id: (q._id || q.id || q).toString(),
             text: q.text || "Unknown question",
-            type: q.type || "multiple_choice",   
+            type: q.type || "multiple_choice",
             timeLimit: q.timeLimit ?? 15,
             options,
             correctAnswers,
@@ -164,82 +226,100 @@ io.on("connection", (socket) => {
         questionsPayload = {
           questions: normalized.length > 0 ? normalized : getFallbackQuestions(language),
           language: result.language,
-          level: result.level
+          level: result.level,
+          mode,
         };
-      } catch (err) {
-        console.error("Failed to fetch questions:", err);
+      }
+    } catch (err) {
+      console.error("Failed to fetch questions:", err);
+      if (mode !== "word_chain") {
         questionsPayload.questions = getFallbackQuestions(language);
       }
-
-        rooms[roomId] = {
-        players: [p1, p2],
-        language,
-        scores: { [p1.id]: 0, [p2.id]: 0 },  
-        finished: new Set(),
-        questions: Object.fromEntries(         
-          questionsPayload.questions.map(q => [q.id, q.correctAnswers])
-        ),
-};
-
-          await db.collection("active_rooms").insertOne({
-            roomId,
-            players: [
-              { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0 },
-              { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0 },
-            ],
-            questions: questionsPayload.questions,
-            currentIndexes: {
-              [p1.userId.toString()]: 0,
-              [p2.userId.toString()]: 0,
-            },
-            finished: [],
-            language,
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min TTL
-          });
-
-      console.log("Match created:", roomId, "questions:", questionsPayload.questions.length);
-
-      io.to(roomId).emit("match_found", {
-        roomId,
-        players: [
-          { id: p1.id, name: p1.userName, avatarBase64: p1.avatarBase64 ?? null },
-          { id: p2.id, name: p2.userName, avatarBase64: p2.avatarBase64 ?? null }
-        ],
-        ...questionsPayload
-      });
     }
-  });
 
-   socket.on("upload_avatar", async ({ base64Image }) => {
-    console.log("upload_avatar received, size:", base64Image?.length);
-  if (!socket.userId || !base64Image) return;
-  try {
-    // Sanity-check size — base64 of 500KB image ≈ 680KB string
-    if (base64Image.length > 700_000) {
-      return socket.emit("error_msg", "Image is too large. Please choose a smaller photo.");
-    }
- 
-    await users.updateOne(
-      { _id: socket.userId },
-      { $set: { avatarBase64: base64Image } }
-    );
- 
-    socket.emit("avatar_updated", { avatarBase64: base64Image });
-  } catch (err) {
-    console.error("upload_avatar error:", err);
-    socket.emit("error_msg", "Could not upload image");
+    rooms[roomId] = {
+      players: [p1, p2],
+      language,
+      mode,
+      scores: { [p1.id]: 0, [p2.id]: 0 },
+      finished: new Set(),
+      questions: mode === "classic"
+        ? Object.fromEntries(
+            questionsPayload.questions.map(q => [q.id, q.correctAnswers || []])
+          )
+        : {}, // word_chain validates differently
+      // Word chain state
+      ...(mode === "word_chain" && {
+        currentWord: questionsPayload.startWord,
+        usedWords: new Set([questionsPayload.startWord]),
+        endsAt: new Date(questionsPayload.endsAt),
+      }),
+    };
+
+    await db.collection("active_rooms").insertOne({
+      roomId,
+      mode,
+      players: [
+        { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0 },
+        { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0 },
+      ],
+      questions: questionsPayload.questions,
+      currentIndexes: {
+        [p1.userId.toString()]: 0,
+        [p2.userId.toString()]: 0,
+      },
+      finished: [],
+      language,
+      startWord: questionsPayload.startWord ?? null,
+      currentWord: questionsPayload.startWord ?? null,
+      usedWords: questionsPayload.usedWords ?? [],
+      durationSeconds: questionsPayload.durationSeconds ?? null,
+      endsAt: questionsPayload.endsAt ? new Date(questionsPayload.endsAt) : null,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    });
+
+    io.to(roomId).emit("match_found", {
+      roomId,
+      mode,
+      players: [
+        { id: p1.id, userId: p1.userId?.toString(), name: p1.userName, avatarBase64: p1.avatarBase64 ?? null },
+        { id: p2.id, userId: p2.userId?.toString(), name: p2.userName, avatarBase64: p2.avatarBase64 ?? null }
+      ],
+      ...questionsPayload,
+    });
   }
 });
 
+  socket.on("upload_avatar", async ({ base64Image }) => {
+    console.log("upload_avatar received, size:", base64Image?.length);
+    if (!socket.userId || !base64Image) return;
+    try {
+      // Sanity-check size — base64 of 500KB image ≈ 680KB string
+      if (base64Image.length > 700_000) {
+        return socket.emit("error_msg", "Image is too large. Please choose a smaller photo.");
+      }
 
-    socket.on("get_active_room", async () => {
+      await users.updateOne(
+        { _id: socket.userId },
+        { $set: { avatarBase64: base64Image } }
+      );
+
+      socket.emit("avatar_updated", { avatarBase64: base64Image });
+    } catch (err) {
+      console.error("upload_avatar error:", err);
+      socket.emit("error_msg", "Could not upload image");
+    }
+  });
+
+
+  socket.on("get_active_room", async () => {
     if (!socket.userId) return socket.emit("active_room", { room: null });
 
     const userId = socket.userId.toString();
     const room = await db.collection("active_rooms").findOne({
       "players.userId": userId,
-      finished: { $not: { $all: [] } }, 
+      finished: { $not: { $all: [] } },
       expiresAt: { $gt: new Date() },
     });
 
@@ -251,56 +331,151 @@ io.on("connection", (socket) => {
     socket.emit("active_room", {
       room: {
         roomId: room.roomId,
+        mode: room.mode ?? "classic",
+        language: room.language ?? "english",
         questions: room.questions,
         myScore: me?.score ?? 0,
         opponentScore: opponent?.score ?? 0,
         opponentName: opponent?.name ?? "Opponent",
         myCurrentIndex: room.currentIndexes?.[userId] ?? 0,
         opponentFinished: room.finished?.includes(opponent?.userId),
+        currentWord: room.currentWord ?? room.startWord ?? null,
+        usedWords: room.usedWords ?? [],
+        durationSeconds: room.durationSeconds ?? null,
+        endsAt: room.endsAt ? new Date(room.endsAt).toISOString() : null,
       },
     });
   });
 
   socket.on("rejoin_room", async ({ roomId }) => {
-  const room = await db.collection("active_rooms").findOne({ roomId });
-  if (!room) return socket.emit("room_expired");
+    const room = await db.collection("active_rooms").findOne({ roomId });
+    if (!room) return socket.emit("room_expired");
 
-  socket.join(roomId);
-  socket.battleService_roomId = roomId; // track for disconnect cleanup
+    socket.join(roomId);
+    socket.battleService_roomId = roomId; // track for disconnect cleanup
 
-  // Let the opponent know this player reconnected
-  socket.to(roomId).emit("opponent_reconnected");
-});
+    // Let the opponent know this player reconnected
+    socket.to(roomId).emit("opponent_reconnected");
+  });
 
   // Relay player actions (answers, moves, etc.)
-socket.on("player_event", async (data) => {
-  io.to(data.roomId).emit("player_event", data.payload);
+  socket.on("player_event", async (data) => {
+    let isCorrect = false;
+    const action = data?.payload?.action;
 
-  // Persist progress
-  if (data.payload?.action === "answer" && socket.userId) {
-    const userId = socket.userId.toString();
-    await db.collection("active_rooms").updateOne(
-      { roomId: data.roomId },
-      {
-        $inc: { [`scores.${userId}`]: 1 },
-        $set: { [`currentIndexes.${userId}`]: data.payload.questionIndex ?? 0 },
+    if (action === "answer") {
+      const roomMem = rooms[data.roomId];
+      if (roomMem && roomMem.questions) {
+        const correctList = roomMem.questions[data.payload.questionId] || [];
+        const ans = data.payload.answer;
+        if (Array.isArray(ans)) {
+          isCorrect = JSON.stringify(ans) === JSON.stringify(correctList);
+        } else {
+          isCorrect = correctList.some(c => String(c).trim().toLowerCase() === String(ans).trim().toLowerCase());
+        }
+
+        if (isCorrect) {
+          roomMem.scores[socket.id] = (roomMem.scores[socket.id] || 0) + 1;
+        }
       }
-    );
-  }
-
-  if (data.payload?.action === "finish" && socket.userId) {
-    const userId = socket.userId.toString();
-    await db.collection("active_rooms").updateOne(
-      { roomId: data.roomId },
-      { $addToSet: { finished: userId } }
-    );
-    // Clean up when both finished
-    const room = await db.collection("active_rooms").findOne({ roomId: data.roomId });
-    if (room?.finished?.length >= 2) {
-      await db.collection("active_rooms").deleteOne({ roomId: data.roomId });
+      // Append correctness to payload so client can update score UI
+      data.payload.correct = isCorrect;
     }
-  }
-});
+
+    if (action === "word_chain_move") {
+      const roomMem = rooms[data.roomId];
+      const submittedWord = normalizeChainWord(data.payload?.word);
+
+      data.payload.playerId = socket.userId?.toString();
+
+      if (!roomMem || roomMem.mode !== "word_chain") {
+        data.payload.valid = false;
+        data.payload.error = "This room is not a word chain match.";
+      } else if (!submittedWord) {
+        data.payload.valid = false;
+        data.payload.error = "Enter a word first.";
+      } else if (!isWordChainCandidateValid(submittedWord)) {
+        data.payload.valid = false;
+        data.payload.error = "Use a single word with letters only.";
+      } else if (roomMem.usedWords.has(submittedWord)) {
+        data.payload.valid = false;
+        data.payload.error = "That word has already been used.";
+      } else {
+        const expectedLetter = getLastLetter(roomMem.currentWord);
+
+        if (expectedLetter && submittedWord[0] !== expectedLetter) {
+          data.payload.valid = false;
+          data.payload.error = `Your word must start with "${expectedLetter.toUpperCase()}".`;
+        } else {
+          roomMem.currentWord = submittedWord;
+          roomMem.usedWords.add(submittedWord);
+          roomMem.scores[socket.id] = (roomMem.scores[socket.id] || 0) + 1;
+
+          data.payload.valid = true;
+          data.payload.word = submittedWord;
+          data.payload.currentWord = submittedWord;
+          data.payload.usedWords = Array.from(roomMem.usedWords);
+
+          await db.collection("active_rooms").updateOne(
+            { roomId: data.roomId },
+            {
+              $set: {
+                currentWord: submittedWord,
+                usedWords: Array.from(roomMem.usedWords),
+              },
+              $inc: { "players.$[elem].score": 1 },
+            },
+            { arrayFilters: [{ "elem.userId": socket.userId?.toString() }] }
+          );
+        }
+      }
+    }
+
+    // Broadcast modified event to opponents
+    io.to(data.roomId).emit("player_event", data.payload);
+
+    // Persist progress
+    if (action === "answer" && socket.userId) {
+      const userId = socket.userId.toString();
+      const updateObj = {
+        $set: { [`currentIndexes.${userId}`]: data.payload.questionIndex ?? 0 },
+      };
+
+      let updateOpts = {};
+      if (isCorrect) {
+        updateObj.$inc = { "players.$[elem].score": 1 };
+        updateOpts = { arrayFilters: [{ "elem.userId": userId }] };
+      }
+
+      await db.collection("active_rooms").updateOne(
+        { roomId: data.roomId },
+        updateObj,
+        updateOpts
+      );
+    }
+
+    if (action === "finish" && socket.userId) {
+      const userId = socket.userId.toString();
+      await db.collection("active_rooms").updateOne(
+        { roomId: data.roomId },
+        { $addToSet: { finished: userId } }
+      );
+
+      const memRoom = rooms[data.roomId];
+      if (memRoom) {
+        memRoom.finished.add(socket.id);
+        if (memRoom.finished.size >= 2) {
+          resolveRoom(data.roomId);
+        }
+      }
+
+      // Clean up when both finished
+      const room = await db.collection("active_rooms").findOne({ roomId: data.roomId });
+      if (room?.finished?.length >= 2) {
+        await db.collection("active_rooms").deleteOne({ roomId: data.roomId });
+      }
+    }
+  });
   // Friends: send a friend request by email or userId
   socket.on("add_friend", async ({ email, userId }) => {
     try {
@@ -506,11 +681,11 @@ socket.on("player_event", async (data) => {
 
 
   socket.on("leave_queue", () => {
-  for (const lang of Object.keys(queuesByLanguage)) {
-    queuesByLanguage[lang] = queuesByLanguage[lang].filter((s) => s !== socket);
-  }
-  console.log(`Player ${socket.userName} left the queue`);
-});
+    for (const key of Object.keys(queues)) {
+      queues[key] = queues[key].filter((s) => s !== socket);
+    }
+    console.log(`Player ${socket.userName} left the queue`);
+  });
 
   // Friends: search potential new friends by name (live search)
   socket.on("search_players", async ({ name }) => {
@@ -537,7 +712,7 @@ socket.on("player_event", async (data) => {
       // Fetch a limited number of candidates by name
       const candidates = await users
         .find({ name: regex })
-        .project({ name: 1, rating: 1, friends: 1 , avatarBase64: 1 })
+        .project({ name: 1, rating: 1, friends: 1, avatarBase64: 1 })
         .limit(50)
         .toArray();
 
@@ -636,7 +811,7 @@ socket.on("player_event", async (data) => {
   });
 
 
-    socket.on("get_game_history", async () => {
+  socket.on("get_game_history", async () => {
     if (!socket.userId) return;
     try {
       const games = await db.collection("games")
@@ -645,16 +820,18 @@ socket.on("player_event", async (data) => {
         .limit(20)
         .toArray();
 
-      socket.emit("game_history", { games: games.map(g => ({
-        id: g._id.toString(),
-        players: g.players.map(p => ({
-          ...p,
-          userId: p.userId.toString(),
-        })),
-        language: g.language,
-        level: g.level,
-        playedAt: g.playedAt,
-      }))});
+      socket.emit("game_history", {
+        games: games.map(g => ({
+          id: g._id.toString(),
+          players: g.players.map(p => ({
+            ...p,
+            userId: p.userId.toString(),
+          })),
+          language: g.language,
+          level: g.level,
+          playedAt: g.playedAt,
+        }))
+      });
     } catch (err) {
       console.error("get_game_history error:", err);
     }
@@ -842,59 +1019,59 @@ socket.on("player_event", async (data) => {
     }
   });
 
-socket.on("register", async ({ email, password, name, language, startingRating }) => {
-  try {
-    if (!email || !password) {
-      return socket.emit("error_msg", "Missing credentials");
+  socket.on("register", async ({ email, password, name, language, startingRating }) => {
+    try {
+      if (!email || !password) {
+        return socket.emit("error_msg", "Missing credentials");
+      }
+
+      const lang = normalizeLanguage(language ?? 'english');
+      const rating = typeof startingRating === 'number' ? startingRating : 200;
+
+      const ratings = {
+        english: null,
+        german: null,
+        french: null,
+        [lang]: rating,
+      };
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      now = new Date();
+
+      const result = await users.insertOne({
+        email,
+        passwordHash,
+        name,
+        rating,
+        ratings,
+        friends: [],
+        createdAt: now,
+        lastSeen: now,
+      });
+
+      socket.userId = result.insertedId;
+      socket.userName = name;
+      socket.rating = rating;
+      socket.ratings = ratings;
+
+      socket.emit("register_success", {
+        userId: socket.userId,
+        name,
+        rating,
+        ratings,
+        friendsCount: 0,
+        createdAt: now,
+        lastSeen: now,
+        avatarBase64: null
+      });
+
+    } catch (err) {
+      socket.emit("error_msg", "Email already exists");
     }
+  });
 
-    const lang = normalizeLanguage(language ?? 'english');
-    const rating = typeof startingRating === 'number' ? startingRating : 200;
-
-    const ratings = {
-      english: null,
-      german: null,
-      french: null,
-      [lang]: rating,
-    };
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    now = new Date();
-
-    const result = await users.insertOne({
-      email,
-      passwordHash,
-      name,
-      rating,
-      ratings,
-      friends: [],
-      createdAt: now,
-      lastSeen: now,
-    });
-
-    socket.userId = result.insertedId;
-    socket.userName = name;
-    socket.rating = rating;
-    socket.ratings = ratings;
-
-    socket.emit("register_success", {
-      userId: socket.userId,
-      name,
-      rating,
-      ratings,
-      friendsCount: 0,
-      createdAt: now,
-      lastSeen: now,
-      avatarBase64: null
-    });
-
-  } catch (err) {
-    socket.emit("error_msg", "Email already exists");
-  }
-});
-
-    socket.on("login", async ({ email, password }) => {
+  socket.on("login", async ({ email, password }) => {
     if (!users) {
       console.error("Login attempted before MongoDB initialized");
       return socket.emit("error_msg", "Server is starting up, please try again in a moment.");
@@ -958,93 +1135,93 @@ socket.on("register", async ({ email, password, name, language, startingRating }
 
   // Handle disconnect
   socket.on("disconnect", () => {
-  untrackSocketForUser(socket);
-  io.emit('online_count', { count: getOnlineCount() });
+    untrackSocketForUser(socket);
+    io.emit('online_count', { count: getOnlineCount() });
 
-  for (const lang of Object.keys(queuesByLanguage)) {
-    queuesByLanguage[lang] = queuesByLanguage[lang].filter(s => s !== socket);
-  }
-
-  for (const [roomId, room] of Object.entries(rooms)) {
-    if (room.players?.includes(socket)) {
-      const other = room.players.find(p => p !== socket);
-      if (other) {
-        other.emit("opponent_disconnected");
-        // Give disconnected player a score of -1 so they always lose the ELO calculation
-        room.scores[socket.id] = -1;
-        room.finished.add(socket.id);
-        // Trigger ELO if the other player had already finished
-        if (room.finished.size >= 2) {
-          // re-use the same finish logic by faking a finish event
-          socket.emit = () => {}; // silence any emits to the dead socket
-          resolveRoom(roomId); 
-          return;// inline the ELO resolution rather than duplicating — extract to a function
-        }
-      }
-      delete rooms[roomId];
+  for (const key of Object.keys(queues)) {
+      queues[key] = queues[key].filter((s) => s !== socket);
     }
-  }
-});
+
+    for (const [roomId, room] of Object.entries(rooms)) {
+      if (room.players?.includes(socket)) {
+        const other = room.players.find(p => p !== socket);
+        if (other) {
+          other.emit("opponent_disconnected");
+          // Give disconnected player a score of -1 so they always lose the ELO calculation
+          room.scores[socket.id] = -1;
+          room.finished.add(socket.id);
+          // Trigger ELO if the other player had already finished
+          if (room.finished.size >= 2) {
+            // re-use the same finish logic by faking a finish event
+            socket.emit = () => { }; // silence any emits to the dead socket
+            resolveRoom(roomId);
+            return;// inline the ELO resolution rather than duplicating — extract to a function
+          }
+        }
+        delete rooms[roomId];
+      }
+    }
+  });
 
   const { ObjectId } = require("mongodb");
- 
- socket.on("auth", async ({ token }) => {
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
 
-    if (!users) {
-      console.error("Auth attempted before MongoDB initialized");
-      return socket.emit("auth_failed");
+  socket.on("auth", async ({ token }) => {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+
+      if (!users) {
+        console.error("Auth attempted before MongoDB initialized");
+        return socket.emit("auth_failed");
+      }
+
+      const user = await users.findOne({ _id: new ObjectId(payload.userId) });
+      if (!user) {
+        console.log("Auth failed, user not found", payload.userId);
+        return socket.emit("auth_failed");
+      }
+
+      socket.userId = user._id;
+      socket.userName = user.name;
+      socket.avatarBase64 = user.avatarBase64 ?? null;
+      const baseRating =
+        typeof user.rating === "number" && !isNaN(user.rating)
+          ? user.rating
+          : 1000;
+      const ratings = user.ratings || {
+        english: baseRating,
+        german: baseRating,
+        french: baseRating,
+      };
+
+      socket.ratings = ratings;
+
+      // Track socket for notifications
+      trackSocketForUser(socket);
+      io.emit('online_count', { count: getOnlineCount() });
+
+
+      const friendsIds = Array.isArray(user.friends) ? user.friends : [];
+      const friendsCount = friendsIds.length;
+
+      console.log("Auth OK for", user.name);
+      console.log(getOnlineCount(), "users online");
+
+      socket.emit("auth_success", {
+        userId: user._id.toString(),
+        name: user.name,
+        rating: baseRating,
+        ratings,
+        friendsCount,
+        createdAt: user.createdAt,
+        lastSeen: user.lastSeen,
+        avatarBase64: user.avatarBase64 ?? null,
+        onlineCount: getOnlineCount(),
+      });
+    } catch (e) {
+      console.error("Auth failed", e);
+      socket.emit("auth_failed");
     }
-
-    const user = await users.findOne({ _id: new ObjectId(payload.userId) });
-    if (!user) {
-      console.log("Auth failed, user not found", payload.userId);
-      return socket.emit("auth_failed");
-    }
-
-    socket.userId = user._id;
-    socket.userName = user.name;
-    socket.avatarBase64 = user.avatarBase64 ?? null;
-    const baseRating =
-      typeof user.rating === "number" && !isNaN(user.rating)
-        ? user.rating
-        : 1000;
-    const ratings = user.ratings || {
-      english: baseRating,
-      german: baseRating,
-      french: baseRating,
-    };
-
-    socket.ratings = ratings;
-
-    // Track socket for notifications
-    trackSocketForUser(socket);
-    io.emit('online_count', { count: getOnlineCount() });
-    
-
-    const friendsIds = Array.isArray(user.friends) ? user.friends : [];
-    const friendsCount = friendsIds.length;
-
-    console.log("Auth OK for", user.name);
-    console.log(getOnlineCount(), "users online");
-
-    socket.emit("auth_success", {
-      userId: user._id.toString(),
-      name: user.name,
-      rating: baseRating,
-      ratings,
-      friendsCount,
-      createdAt: user.createdAt,
-      lastSeen: user.lastSeen,
-      avatarBase64: user.avatarBase64 ?? null,
-      onlineCount: getOnlineCount(),
-    });
-  } catch (e) {
-    console.error("Auth failed", e);
-    socket.emit("auth_failed");
-  }
-});
+  });
 
 
 });
@@ -1241,3 +1418,9 @@ function calculateElo(ratingA, ratingB, scoreA, K = 32) {
     newB: Math.round(ratingB + K * (scoreB - expectedB)),
   };
 }
+
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});

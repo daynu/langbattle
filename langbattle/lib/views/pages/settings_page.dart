@@ -11,6 +11,7 @@ import 'package:langbattle/extensions/context_extensions.dart';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:langbattle/views/pages/welcome_page.dart';
 
 class SettingsPage extends StatefulWidget {
   final BattleService? battleService;
@@ -348,6 +349,31 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.errorContainer,
+              foregroundColor: colorScheme.onErrorContainer,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              widget.battleService?.logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => WelcomePage()),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text(
+              'Log Out',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );

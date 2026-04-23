@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Langbattle - Battle Mode</title>
+<script nonce="FHLcbUrjHLnuDEbwml2Q1A==" src="https://contribution.usercontent.google.com/O29QRkTYVGZ8FBm5ZUb1fu67mg6k79tbfv5PRxbck5rtFW3B58U4zEcx56vw7bheFqicbRXwPpshrgp5O77lUVf5MAALoN1nWLVG3wWih7_0pdNewPZvEfEWVeYu7rrjAIgpSawO5DNgc0vu3e0aoy5nZ3QSbs-rkDbjHu8OHebUjGViUBbRTTufrMQPtz6cIrHJELw-0KRHIgOXfKE-7W4FwdIQtsndMThjNfOgKEi6eVv_zNkfECzZouqMZyRcTCZY92WptGwstEm0d1SI0DiDVR_7f1XpjiGB1flXlJT4AwEwWct3Lj6y2F92jEP6_50z4rLFU6UUxts2NbRVw3icU1wjrjsMW0pKQZQe2ddmFNM6P8zqIJuExG1U_M7YU6rQxkTRFqxvhxJT8nMVbl_dvcvO-LIJYcROCPKXWH-3Db29Y2mezevR3SKZ8Bkdb2mfG35QXOwuFQ_yLwylJ5EF_PGxJyoqsi28tmaIpa0i7PWAZPjaAjN1a_ZjMIFHVzNvNCXevcFm79O_t3oM8nYdXkAtEt_cgBtgeUyvuB82QmfVXlvsJOePw4hy-YWLx9-3g3w6OWRWum_TKwDcqU2MWW8inwquixa8-5HF-HfZOhn1jPz9QpaH6bJPTjNzRU1xIq7cOdxaLPxeslyvEdrvaWeM_ySQTC5Fp07cC19GHuKVwWXg5S9G6LwbJC9-Ribicc-5cMWS6TCE5hgK-63thRc58Hprkx-qkBop2QtIuSbqMLFWJEzTqhf3Xsv6obXQ3uciIzhuoxb1WQHyqaccZ4DkGLszYsheic9j" type="text/javascript"></script><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .squircle-shadow {
+            box-shadow: 0 4px 0 0 #755700;
+        }
+        .squircle-shadow-active {
+            box-shadow: 0 2px 0 0 #755700;
+            transform: translateY(2px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#d3d5cf",
+                      "on-surface": "#2d2f2c",
+                      "surface-tint": "#755700",
+                      "on-primary": "#fff1db",
+                      "on-tertiary": "#befff8",
+                      "on-secondary": "#ffefeb",
+                      "outline": "#767773",
+                      "secondary-dim": "#962700",
+                      "surface": "#f7f7f2",
+                      "on-error-container": "#520c00",
+                      "inverse-surface": "#0d0f0c",
+                      "surface-container-low": "#f1f1ec",
+                      "tertiary-dim": "#005a55",
+                      "on-primary-fixed-variant": "#604700",
+                      "tertiary-container": "#a7f3ec",
+                      "on-background": "#2d2f2c",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-highest": "#dcddd7",
+                      "secondary": "#ab2d00",
+                      "inverse-on-surface": "#9c9d99",
+                      "error-container": "#f95630",
+                      "on-secondary-fixed-variant": "#982700",
+                      "error": "#b02500",
+                      "primary-dim": "#664b00",
+                      "on-secondary-container": "#882200",
+                      "surface-variant": "#dcddd7",
+                      "on-error": "#ffefec",
+                      "on-tertiary-container": "#005e59",
+                      "on-primary-container": "#553e00",
+                      "on-surface-variant": "#5a5c58",
+                      "primary-fixed-dim": "#ecb200",
+                      "on-secondary-fixed": "#661700",
+                      "tertiary-fixed-dim": "#99e5dd",
+                      "primary-container": "#fdc003",
+                      "surface-bright": "#f7f7f2",
+                      "on-primary-fixed": "#3d2b00",
+                      "tertiary-fixed": "#a7f3ec",
+                      "primary": "#755700",
+                      "inverse-primary": "#fdc003",
+                      "tertiary": "#0d6661",
+                      "secondary-container": "#ffc4b4",
+                      "on-tertiary-fixed-variant": "#116863",
+                      "surface-container-high": "#e2e3dd",
+                      "error-dim": "#b92902",
+                      "surface-container": "#e8e9e3",
+                      "background": "#f7f7f2",
+                      "secondary-fixed-dim": "#ffb19b",
+                      "primary-fixed": "#fdc003",
+                      "outline-variant": "#adada9",
+                      "secondary-fixed": "#ffc4b4",
+                      "on-tertiary-fixed": "#004a45"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "1.5rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Plus Jakarta Sans"],
+                      "body": ["Be Vietnam Pro"],
+                      "label": ["Plus Jakarta Sans"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-[#f7f7f2] fixed top-0 w-full z-50 shadow-[0_4px_0_0_rgba(117,87,0,0.1)] flex justify-between items-center px-6 h-16 w-full">
+<button class="text-[#755700] active:scale-95 transition-transform duration-200 cursor-pointer p-2 rounded-full hover:bg-[#dcddd7]" style="">
+<span class="material-symbols-outlined" data-icon="close" style="">close</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold uppercase tracking-wider text-[#755700] text-xl font-black" style="">BATTLE</h1>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 pt-24 pb-32 px-6 max-w-2xl mx-auto w-full flex flex-col">
+<!-- Timer & Round Header -->
+<div class="flex flex-col items-center mb-10">
+<div class="relative w-24 h-24 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-high" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary-container" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-2xl font-headline font-extrabold text-on-surface" style="">16s</span>
+<span class="text-[10px] font-headline font-bold uppercase text-outline" style="">LEFT</span>
+</div>
+</div>
+<div class="mt-4 px-4 py-1 bg-surface-container-high rounded-full">
+<span class="text-xs font-headline font-bold text-on-surface-variant uppercase tracking-widest" style="">Battle Round 1</span>
+</div>
+</div>
+<!-- Translation Challenge Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 mb-8 text-center shadow-[0_8px_24px_rgba(45,47,44,0.04)] relative">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-tertiary px-4 py-1 rounded-full">
+<span class="text-[10px] font-headline font-bold text-on-tertiary uppercase" style="">Translate to German</span>
+</div>
+<h2 class="text-2xl font-headline font-bold leading-relaxed text-on-surface" style="">
+                "Hätte ich mehr Zeit <span class="text-primary inline-block min-w-[80px] border-b-4 border-primary-container mx-1" style="">___</span>, wäre ich mitgekommen."
+            </h2>
+<p class="mt-4 text-on-surface-variant italic font-medium" style="">"If I had had more time, I would have come along."</p>
+</div>
+<!-- Multiple Choice Options -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<button class="bg-surface-container-low hover:bg-surface-container-high p-6 rounded-xl font-headline font-extrabold text-xl text-on-surface transition-all active:scale-95 border-2 border-transparent hover:border-primary-container/30" style="">
+                gehabt
+            </button>
+<button class="bg-surface-container-low hover:bg-surface-container-high p-6 rounded-xl font-headline font-extrabold text-xl text-on-surface transition-all active:scale-95 border-2 border-transparent hover:border-primary-container/30" style="">
+                haben
+            </button>
+<button class="bg-surface-container-low hover:bg-surface-container-high p-6 rounded-xl font-headline font-extrabold text-xl text-on-surface transition-all active:scale-95 border-2 border-transparent hover:border-primary-container/30" style="">
+                hatte
+            </button>
+<button class="bg-surface-container-low hover:bg-surface-container-high p-6 rounded-xl font-headline font-extrabold text-xl text-on-surface transition-all active:scale-95 border-2 border-transparent hover:border-primary-container/30" style="">
+                habe
+            </button>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-primary-container text-on-primary-container font-headline font-extrabold text-lg py-5 rounded-xl uppercase tracking-widest squircle-shadow active:squircle-shadow-active transition-all mb-12" style="">
+            Submit Answer
+        </button>
+<!-- Player Score Cards (Asymmetric Bento) -->
+<div class="grid grid-cols-2 gap-6 mt-auto">
+<div class="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary-container/10 rounded-full -mr-8 -mt-8"></div>
+<div class="w-12 h-12 rounded-xl overflow-hidden ring-4 ring-primary-container shadow-lg z-10">
+<img alt="daynuu avatar" class="w-full h-full object-cover" data-alt="close-up portrait of a young man with a friendly smile, clean urban setting, warm natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxGioEzQYqYpCTFeWTnPJFWqXmHBKhSBW8Tgi-kzTdIrA7QCdUfTxGzMRtO8SbUkWRBrJN-1rV_h5L0rfUzd12UEqmFihXV4GHnf0HBbmeZJtKsJV-oMz34HN54VD3QV_8BHKE2NMeUTs6i-pztiUTz7MB2uGzhet22ShuPD9k0NwfnZOulLcawVN5kWJtkRMV3PXGS0yxEi_eh6PfYXH2qJVzn__DqRiRxrxPThBkARv-y_kL5swjuxGqervxo7c0nifcIFNL83xZ" style=""/>
+</div>
+<div class="flex flex-col z-10">
+<span class="text-[10px] font-headline font-bold text-primary uppercase" style=""><br/></span>
+<span class="font-headline font-extrabold text-on-surface" style="">daynuu</span>
+<span class="text-2xl font-headline font-black text-on-surface" style="">0</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-xl flex flex-row-reverse items-center gap-4 text-right relative overflow-hidden">
+<div class="absolute top-0 left-0 w-16 h-16 bg-secondary-container/10 rounded-full -ml-8 -mt-8"></div>
+<div class="w-12 h-12 rounded-xl overflow-hidden ring-4 ring-outline-variant shadow-lg z-10">
+<img alt="palmer avatar" class="w-full h-full object-cover" data-alt="professional headshot of a person with stylish glasses, minimalist neutral background, soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_gWVkK8kTK3bKjMuKqetHh99AKP7DJk98xDGa8WbDbzlY4l36J7_VMEP1iUc4mOqPMrzeM2uawQusmM4AUOojMB4iXR6hxqa-W8jm-1pmPd3KJqKm2JPGxVQHnwFz3xll_6rVWvfMa1L8zjTREqvS8NiTPGj7stU9Wbn_CaZj4txpdMae6YwzVQIRMLgSqukvMPiSNgnnWBQUnEPuIakwXjJRTaR-h3BfaOZcZfGDH4sNS8sGWfw2OXPy32XuMmzMQh2MIOKPXNsK" style=""/>
+</div>
+<div class="flex flex-col z-10">
+<span class="text-[10px] font-headline font-bold text-outline uppercase" style=""><br/></span>
+<span class="font-headline font-extrabold text-on-surface" style="">palmer</span>
+<span class="text-2xl font-headline font-black text-on-surface" style="">0</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+</body></html>

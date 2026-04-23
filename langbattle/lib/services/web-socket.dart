@@ -23,7 +23,7 @@ class BattleService {
   /// Connect to the Socket.IO server
   Future<void> connect() async {
     socket = IO.io(
-      'http://127.0.0.1:5000',
+      'http://localhost:3000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
@@ -33,7 +33,7 @@ class BattleService {
     socket!.on("auth_success", (data) {
       print("Authentication restored/verified");
       _saveUserData(data); // Update local storage
-      
+
       // Notify UI that auth is ready
       _controller.add({"type": "auth_success", "data": data});
     });
@@ -42,40 +42,36 @@ class BattleService {
       _controller.add({"type": "auth_failed"});
     });
 
-      socket!.on("rating_history", (data) {
-    _controller.add({
-      "type": "rating_history",
-      "language": data["language"],
-      "history": data["history"] ?? [],
+    socket!.on("rating_history", (data) {
+      _controller.add({
+        "type": "rating_history",
+        "language": data["language"],
+        "history": data["history"] ?? [],
+      });
     });
-  });
 
-  socket!.on("online_count", (data) {
-  onlineCount = data["count"] ?? 0;
-  print("Online count received : $onlineCount");
-  _controller.add({"type": "online_count"});
-});
+    socket!.on("online_count", (data) {
+      onlineCount = data["count"] ?? 0;
+      print("Online count received : $onlineCount");
+      _controller.add({"type": "online_count"});
+    });
 
+    socket!.on("active_room", (data) {
+      activeRoom = data["room"]; // save it
+      _controller.add({"type": "active_room", "room": data["room"]});
+    });
 
-  socket!.on("active_room", (data) {
-    activeRoom = data["room"]; // save it
-    _controller.add({"type": "active_room", "room": data["room"]});
-  });
+    socket!.on("room_expired", (_) {
+      _controller.add({"type": "room_expired"});
+    });
 
-  socket!.on("room_expired", (_) {
-    _controller.add({"type": "room_expired"});
-  });
-
-  socket!.on("opponent_reconnected", (_) {
-    _controller.add({"type": "opponent_reconnected"});
-  });
+    socket!.on("opponent_reconnected", (_) {
+      _controller.add({"type": "opponent_reconnected"});
+    });
 
     socket!.on("game_history", (data) {
-  _controller.add({
-    "type": "game_history",
-    "games": data["games"] ?? [],
-  });
-});
+      _controller.add({"type": "game_history", "games": data["games"] ?? []});
+    });
 
     // 3. Standard Game Events
     socket!.on("match_found", (data) {
@@ -83,8 +79,14 @@ class BattleService {
       _controller.add({
         "type": "match_found",
         "roomId": roomId,
+        "mode": data["mode"],
+        "language": data["language"],
         "players": data["players"],
         "questions": data["questions"],
+        "startWord": data["startWord"],
+        "usedWords": data["usedWords"] ?? const [],
+        "durationSeconds": data["durationSeconds"],
+        "endsAt": data["endsAt"],
       });
     });
 
@@ -112,11 +114,7 @@ class BattleService {
       if (rawList is List) {
         for (final item in rawList) {
           if (item is Map) {
-            list.add(
-              FriendInfo.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            );
+            list.add(FriendInfo.fromJson(Map<String, dynamic>.from(item)));
           }
         }
       }
@@ -160,9 +158,7 @@ class BattleService {
         for (final item in rawList) {
           if (item is Map) {
             list.add(
-              PlayerSearchResult.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              PlayerSearchResult.fromJson(Map<String, dynamic>.from(item)),
             );
           }
         }
@@ -175,7 +171,7 @@ class BattleService {
       });
     });
 
-    socket!.on('friend_removed', (data){
+    socket!.on('friend_removed', (data) {
       requestFriendsList();
     });
 
@@ -194,10 +190,7 @@ class BattleService {
         }
       }
       friendRequests = list;
-      _controller.add({
-        "type": "friend_requests",
-        "requests": friendRequests,
-      });
+      _controller.add({"type": "friend_requests", "requests": friendRequests});
     });
 
     socket!.on("friend_request_created", (data) {
@@ -210,8 +203,9 @@ class BattleService {
         // Not for this user; ignore
         return;
       }
-      if (!friendRequests
-          .any((r) => r.requestId.toString() == notification.requestId.toString())) {
+      if (!friendRequests.any(
+        (r) => r.requestId.toString() == notification.requestId.toString(),
+      )) {
         friendRequests.insert(0, notification);
       }
       _controller.add({
@@ -230,9 +224,7 @@ class BattleService {
         return;
       }
       if (requestId != null) {
-        friendRequests.removeWhere(
-          (r) => r.requestId.toString() == requestId,
-        );
+        friendRequests.removeWhere((r) => r.requestId.toString() == requestId);
       }
       _controller.add({
         "type": "friend_request_updated",
@@ -247,46 +239,28 @@ class BattleService {
     });
 
     socket!.on("rating_updated", (data) {
-  // Update local user ratings cache
-      final lang = data["language"]?.toString() ?? "";
-      final newRating = data["newRating"] as int?;
-      if (currentUser != null && lang.isNotEmpty && newRating != null) {
+      final language = data["language"]?.toString();
+      final newRating = data["newRating"];
+      final parsedRating = newRating is int
+          ? newRating
+          : int.tryParse(newRating?.toString() ?? "");
+
+      if (language != null && parsedRating != null && currentUser != null) {
+        // Update the in-memory ratings map
         final updatedRatings = Map<String, int>.from(currentUser!.ratings);
-        updatedRatings[lang] = newRating;
-        currentUser = UserSession(
-          userId: currentUser!.userId,
-          name: currentUser!.name,
-          rating: currentUser!.rating,
-          ratings: updatedRatings,
-          friendsCount: currentUser!.friendsCount,
-        );
+        updatedRatings[language] = parsedRating;
+        currentUser = currentUser!.copyWith(ratings: updatedRatings);
       }
-  _controller.add({"type": "rating_updated", "data": data});
-});
 
-  socket!.on("rating_updated", (data) {
-  final language = data["language"]?.toString();
-  final newRating = data["newRating"];
-  final parsedRating = newRating is int 
-      ? newRating 
-      : int.tryParse(newRating?.toString() ?? "");
-
-  if (language != null && parsedRating != null && currentUser != null) {
-    // Update the in-memory ratings map
-    final updatedRatings = Map<String, int>.from(currentUser!.ratings);
-    updatedRatings[language] = parsedRating;
-    currentUser = currentUser!.copyWith(ratings: updatedRatings);
-  }
-
-  _controller.add({
-    "type": "rating_updated",
-    "language": language,
-    "newRating": parsedRating,
-    "oldRating": data["oldRating"],
-    "delta": data["delta"],
-    "newLevel": data["newLevel"],
-  });
-});
+      _controller.add({
+        "type": "rating_updated",
+        "language": language,
+        "newRating": parsedRating,
+        "oldRating": data["oldRating"],
+        "delta": data["delta"],
+        "newLevel": data["newLevel"],
+      });
+    });
 
     socket!.onConnect((_) {
       print("Connected to Socket.IO server");
@@ -306,23 +280,24 @@ class BattleService {
     });
   }
 
-  
-
-  void register(String email, String password, String name, {required String language, required int startingRating}) {
+  void register(
+    String email,
+    String password,
+    String name, {
+    required String language,
+    required int startingRating,
+  }) {
     socket?.emit("register", {
       "email": email,
       "password": password,
       "name": name,
-      "selectedLanguage": language, 
+      "selectedLanguage": language,
       "startingRating": startingRating,
     });
   }
 
   void login(String email, String password) {
-    socket?.emit("login", {
-      "email": email,
-      "password": password,
-    });
+    socket?.emit("login", {"email": email, "password": password});
   }
 
   void sendAnswer(String questionId, dynamic answer) {
@@ -334,39 +309,52 @@ class BattleService {
         "action": "answer",
         "questionId": questionId,
         "answer": answer,
-        "playerId": currentUser?.userId
-      }
+        "playerId": currentUser?.userId,
+      },
     });
   }
+
   void uploadAvatar(String base64Image) {
-      socket?.emit("upload_avatar", {"base64Image": base64Image});
-    }
+    socket?.emit("upload_avatar", {"base64Image": base64Image});
+  }
 
-
-  void joinQueue({required String language}) {
-  // Wait for authentication first
+  void joinQueue({required String language, required String mode}) {
+    // Wait for authentication first
     if (currentUser == null) {
-    print("Waiting for authentication before joining queue...");
-    // Listen for auth_success
-    StreamSubscription? sub;
-    sub = stream.listen((data) {
-      if (data["type"] == "auth_success") {
-        print("Auth complete, now joining queue");
-        socket?.emit("join_queue", {"language": language});
-        sub?.cancel();
-      }
-    });
-    return;
+      print("Waiting for authentication before joining queue...");
+      // Listen for auth_success
+      StreamSubscription? sub;
+      sub = stream.listen((data) {
+        if (data["type"] == "auth_success") {
+          print("Auth complete, now joining queue");
+          socket?.emit("join_queue", {"language": language, "mode": mode});
+          sub?.cancel();
+        }
+      });
+      return;
     }
 
-  
-  // Already authenticated, join immediately
+    // Already authenticated, join immediately
     if ((socket?.connected ?? false)) {
-      socket!.emit("join_queue", {"language": language});
+      socket!.emit("join_queue", {"language": language, "mode": mode});
       print("Joined matchmaking queue");
     } else {
       print("Cannot join queue: not connected");
     }
+  }
+
+  void submitWordChainWord(String word) {
+    final trimmed = word.trim();
+    if (socket == null || roomId == null || trimmed.isEmpty) return;
+
+    socket!.emit("player_event", {
+      "roomId": roomId,
+      "payload": {
+        "action": "word_chain_move",
+        "word": trimmed,
+        "playerId": currentUser?.userId,
+      },
+    });
   }
 
   void addFriendByEmail(String email) {
@@ -390,8 +378,8 @@ class BattleService {
   }
 
   void requestRatingHistory(String language) {
-  socket?.emit("get_rating_history", {"language": language});
-}
+    socket?.emit("get_rating_history", {"language": language});
+  }
 
   void searchPlayersByName(String name) {
     if (socket == null) return;
@@ -423,27 +411,27 @@ class BattleService {
   }
 
   void requestActiveRoom() {
-  socket?.emit("get_active_room");
-}
+    socket?.emit("get_active_room");
+  }
 
-void rejoinRoom(String roomId) {
-  this.roomId = roomId;
-  socket?.emit("rejoin_room", {"roomId": roomId});
-}
+  void rejoinRoom(String roomId) {
+    this.roomId = roomId;
+    socket?.emit("rejoin_room", {"roomId": roomId});
+  }
 
   // Helper to save data to SharedPreferences and update memory
-Future<void> _saveUserData(Map data) async {
+  Future<void> _saveUserData(Map data) async {
     final prefs = await SharedPreferences.getInstance();
- 
+
     if (data["token"] != null) {
       await prefs.setString("auth_token", data["token"]);
     }
- 
+
     final rawRating = data["rating"];
     final baseRating = rawRating is int
         ? rawRating
         : int.tryParse(rawRating?.toString() ?? "") ?? 1000;
- 
+
     final Map<String, int?> ratings = {};
     final rawRatings = data["ratings"];
     if (rawRatings is Map) {
@@ -463,20 +451,20 @@ Future<void> _saveUserData(Map data) async {
       ratings["german"] = baseRating;
       ratings["french"] = baseRating;
     }
- 
+
     final rawFriendsCount = data["friendsCount"];
     final friendsCount = rawFriendsCount is int
         ? rawFriendsCount
         : int.tryParse(rawFriendsCount?.toString() ?? "") ?? 0;
- 
+
     DateTime? createdAt;
     final rawCreatedAt = data["createdAt"];
     if (rawCreatedAt is String) createdAt = DateTime.tryParse(rawCreatedAt);
- 
+
     DateTime? lastSeen;
     final rawLastSeen = data["lastSeen"];
     if (rawLastSeen is String) lastSeen = DateTime.tryParse(rawLastSeen);
- 
+
     currentUser = UserSession(
       userId: data["userId"].toString(),
       name: data["name"] ?? "",
@@ -493,7 +481,7 @@ Future<void> _saveUserData(Map data) async {
   Future<void> _restoreAuth() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
-  
+
     if (token != null) {
       print("Attempting to restore session with token...");
       socket?.emit("auth", {"token": token});
@@ -525,13 +513,13 @@ Future<void> _saveUserData(Map data) async {
         "action": "finish",
         "playerId": currentUser?.userId,
         "score": score,
-      }
+      },
     });
   }
 
   void requestGameHistory() {
-  socket?.emit("get_game_history");
-}
+    socket?.emit("get_game_history");
+  }
 
   void logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -545,7 +533,6 @@ Future<void> _saveUserData(Map data) async {
   }
 }
 
-
 class UserSession {
   final String userId;
   final String name;
@@ -555,7 +542,7 @@ class UserSession {
   final DateTime? createdAt;
   final DateTime? lastSeen;
   final String? avatarBase64;
- 
+
   UserSession({
     required this.userId,
     required this.name,
@@ -566,18 +553,18 @@ class UserSession {
     this.lastSeen,
     this.avatarBase64,
   });
- 
+
   int? ratingForLanguage(String languageKey) {
     final key = languageKey.toLowerCase();
     return ratings[key];
   }
- 
+
   factory UserSession.fromJson(Map<String, dynamic> json) {
     final rawRating = json['rating'];
     final baseRating = rawRating is int
         ? rawRating
         : int.tryParse(rawRating?.toString() ?? '') ?? 1000;
- 
+
     final Map<String, int?> ratings = {};
     final rawRatings = json['ratings'];
     if (rawRatings is Map) {
@@ -597,31 +584,29 @@ class UserSession {
       ratings['german'] = baseRating;
       ratings['french'] = baseRating;
     }
- 
+
     final rawFriendsCount = json['friendsCount'];
     final friendsCount = rawFriendsCount is int
         ? rawFriendsCount
         : int.tryParse(rawFriendsCount?.toString() ?? '') ?? 0;
- 
+
     DateTime? createdAt;
     final rawCreatedAt = json['createdAt'];
     if (rawCreatedAt is String) {
       createdAt = DateTime.tryParse(rawCreatedAt);
     } else if (rawCreatedAt is Map) {
       // MongoDB date objects sometimes come as { $date: "..." }
-      createdAt = DateTime.tryParse(
-          rawCreatedAt['\$date']?.toString() ?? '');
+      createdAt = DateTime.tryParse(rawCreatedAt['\$date']?.toString() ?? '');
     }
- 
+
     DateTime? lastSeen;
     final rawLastSeen = json['lastSeen'];
     if (rawLastSeen is String) {
       lastSeen = DateTime.tryParse(rawLastSeen);
     } else if (rawLastSeen is Map) {
-      lastSeen =
-          DateTime.tryParse(rawLastSeen['\$date']?.toString() ?? '');
+      lastSeen = DateTime.tryParse(rawLastSeen['\$date']?.toString() ?? '');
     }
- 
+
     return UserSession(
       userId: json['userId'].toString(),
       name: json['name'] ?? 'Unknown',
@@ -633,7 +618,7 @@ class UserSession {
       avatarBase64: json['avatarBase64']?.toString(),
     );
   }
- 
+
   UserSession copyWith({
     String? name,
     int? rating,
@@ -652,7 +637,6 @@ class UserSession {
       createdAt: createdAt ?? this.createdAt,
       lastSeen: lastSeen ?? this.lastSeen,
       avatarBase64: avatarBase64 ?? this.avatarBase64,
-
     );
   }
 }

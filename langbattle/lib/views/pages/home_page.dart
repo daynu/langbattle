@@ -1,23 +1,18 @@
 import "package:flutter/material.dart";
-import 'package:langbattle/views/pages/friends_page.dart';
 import 'package:langbattle/views/pages/settings_page.dart';
 import 'package:langbattle/data/notifiers.dart';
-import 'package:langbattle/objects/question.dart';
 import 'dart:async';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/views/pages/battle_page.dart';
 import 'package:langbattle/views/pages/profile/profile_page.dart';
 import 'package:langbattle/views/pages/notifications_page.dart';
+import 'package:langbattle/views/pages/word_chain_battle_page.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
-import 'package:lottie/lottie.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:langbattle/data/constants.dart';
 
-
-
 class HomePage extends StatefulWidget {
-  
   final BattleService battleService;
   const HomePage({super.key, required this.battleService});
   @override
@@ -28,6 +23,12 @@ class _HomePageState extends State<HomePage> {
   double imgSize = 200;
   String selectedLanguage = "english";
   StreamSubscription<Map<String, dynamic>>? _sub;
+  String selectedMode = "classic";
+
+  final List<Map<String, String>> modes = [
+    {"key": "classic", "title": "Classic", "icon": "🎯"},
+    {"key": "word_chain", "title": "Word Chain", "icon": "🔗"},
+  ];
 
   static const Map<String, String> languageLabels = {
     "english": "languageEnglish",
@@ -46,14 +47,11 @@ class _HomePageState extends State<HomePage> {
       if (type == "friend_requests" ||
           type == "friend_request_created" ||
           type == "friend_request_updated" ||
-          type == "friend_added"||
-          type == "active_room" || type == "online_count" 
-          ) {
+          type == "friend_added" ||
+          type == "active_room" ||
+          type == "online_count") {
         setState(() {});
       }
-
-      
-
     });
     widget.battleService.requestFriendRequests();
   }
@@ -65,96 +63,180 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildActiveGameBanner(BuildContext context) {
-  final room = widget.battleService.activeRoom!;
-  final opponentName = room["opponentName"] ?? "Opponent";
-  final myScore = room["myScore"] ?? 0;
-  final opponentScore = room["opponentScore"] ?? 0;
+    final room = widget.battleService.activeRoom!;
+    final opponentName = room["opponentName"] ?? "Opponent";
+    final myScore = room["myScore"] ?? 0;
+    final opponentScore = room["opponentScore"] ?? 0;
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-      ),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      children: [
-        Icon(
-          Icons.sports_kabaddi,
-          color: Theme.of(context).colorScheme.primary,
-          size: 32,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Game in progress",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                "vs $opponentName  •  $myScore – $opponentScore",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
-                ),
-              ),
-            ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(
+            Icons.sports_kabaddi,
+            color: Theme.of(context).colorScheme.primary,
+            size: 32,
           ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: () => _rejoinGame(context, room),
-          child: const Text("Rejoin"),
-        ),
-      ],
-    ),
-  );
-}
-
-void _rejoinGame(BuildContext context, Map<String, dynamic> room) {
-  final questions = (room["questions"] as List)
-      .map((q) => Question.fromJson(Map<String, dynamic>.from(q)))
-      .toList();
-
-  widget.battleService.rejoinRoom(room["roomId"]);
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => BattleScreen(
-        battleService: widget.battleService,
-        language: room["language"] ?? "english",
-        restoredRoom: room,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Game in progress",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "vs $opponentName  •  $myScore – $opponentScore",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () => _rejoinGame(context, room),
+            child: const Text("Rejoin"),
+          ),
+        ],
       ),
-    ),
-  ).then((_) {
-    // Clear the active room banner once they return from the game
-    widget.battleService.activeRoom = null;
-    setState(() {});
-  });
-}
-
-
-
-Future<void> _loadSavedLanguage() async {
-  final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getString(Kconstants.battleLanguageKey);
-  final uiLocale = localeNotifier.value?.languageCode ?? 'en';
-  final localeMap = {'english': 'en', 'german': 'de', 'french': 'fr', 'romanian': 'ro'};
-  if (saved != null && languageLabels.containsKey(saved) && localeMap[saved] != uiLocale) {
-    setState(() => selectedLanguage = saved);
+    );
   }
-}
+
+  Widget _buildModeSelector() {
+    return SizedBox(
+      height: 110,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: modes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final mode = modes[index];
+          final isSelected = selectedMode == mode["key"];
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedMode = mode["key"]!;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 140,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFFFDC003)
+                      : const Color(0xFFE0E0DC),
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: const Color(0xFFFDC003).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(mode["icon"]!, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(height: 8),
+                  Text(
+                    mode["title"]!,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _rejoinGame(BuildContext context, Map<String, dynamic> room) {
+    widget.battleService.rejoinRoom(room["roomId"]);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _buildBattleScreen(
+          language: room["language"] ?? "english",
+          mode: room["mode"] ?? "classic",
+          restoredRoom: room,
+        ),
+      ),
+    ).then((_) {
+      // Clear the active room banner once they return from the game
+      widget.battleService.activeRoom = null;
+      setState(() {});
+    });
+  }
+
+  Widget _buildBattleScreen({
+    required String language,
+    required String mode,
+    Map<String, dynamic>? restoredRoom,
+  }) {
+    if (mode == "word_chain") {
+      return WordChainBattleScreen(
+        battleService: widget.battleService,
+        language: language,
+        restoredRoom: restoredRoom,
+      );
+    }
+
+    return BattleScreen(
+      battleService: widget.battleService,
+      language: language,
+      restoredRoom: restoredRoom,
+      mode: mode,
+    );
+  }
+
+  Future<void> _loadSavedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(Kconstants.battleLanguageKey);
+    final uiLocale = localeNotifier.value?.languageCode ?? 'en';
+    final localeMap = {
+      'english': 'en',
+      'german': 'de',
+      'french': 'fr',
+      'romanian': 'ro',
+    };
+    if (saved != null &&
+        languageLabels.containsKey(saved) &&
+        localeMap[saved] != uiLocale) {
+      setState(() => selectedLanguage = saved);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,12 +244,14 @@ Future<void> _loadSavedLanguage() async {
     final rating = currentUser?.ratingForLanguage(selectedLanguage);
     final loc = context.loc;
     final languageKey = languageLabels[selectedLanguage] ?? "languageEnglish";
-    final languageLabel = {
-      "languageEnglish": loc.languageEnglish,
-      "languageGerman": loc.languageGerman,
-      "languageFrench": loc.languageFrench,
-      "languageRomanian": loc.languageRomanian,
-    }[languageKey] ?? selectedLanguage;
+    final languageLabel =
+        {
+          "languageEnglish": loc.languageEnglish,
+          "languageGerman": loc.languageGerman,
+          "languageFrench": loc.languageFrench,
+          "languageRomanian": loc.languageRomanian,
+        }[languageKey] ??
+        selectedLanguage;
     final hasNotifications = widget.battleService.friendRequests.isNotEmpty;
 
     final uiLocale = localeNotifier.value?.languageCode ?? 'en';
@@ -196,7 +280,12 @@ Future<void> _loadSavedLanguage() async {
 
     return SingleChildScrollView(
       child: Container(
-        padding: const EdgeInsets.only(top: 10, left: 24, right: 24, bottom: 80),
+        padding: const EdgeInsets.only(
+          top: 10,
+          left: 24,
+          right: 24,
+          bottom: 80,
+        ),
         decoration: const BoxDecoration(
           color: Color(0xFFF7F7F2), // bg-background
         ),
@@ -205,7 +294,7 @@ Future<void> _loadSavedLanguage() async {
           children: [
             if (widget.battleService.activeRoom != null)
               _buildActiveGameBanner(context),
-            
+
             // Notifications Icon (moved from App Bar since user wants Settings as is)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -234,7 +323,9 @@ Future<void> _loadSavedLanguage() async {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1EC), // surface-container-low
+                          color: const Color(
+                            0xFFF1F1EC,
+                          ), // surface-container-low
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -259,7 +350,9 @@ Future<void> _loadSavedLanguage() async {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1EC), // surface-container-low
+                          color: const Color(
+                            0xFFF1F1EC,
+                          ), // surface-container-low
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Stack(
@@ -298,7 +391,8 @@ Future<void> _loadSavedLanguage() async {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProfilePage(battleService: widget.battleService),
+                    builder: (context) =>
+                        ProfilePage(battleService: widget.battleService),
                   ),
                 );
               },
@@ -312,7 +406,7 @@ Future<void> _loadSavedLanguage() async {
                       color: const Color(0xFF2D2F2C).withOpacity(0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
-                    )
+                    ),
                   ],
                 ),
                 child: Row(
@@ -325,7 +419,10 @@ Future<void> _loadSavedLanguage() async {
                           height: 64,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0xFF755700).withOpacity(0.1), width: 2),
+                            border: Border.all(
+                              color: const Color(0xFF755700).withOpacity(0.1),
+                              width: 2,
+                            ),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
@@ -372,7 +469,6 @@ Future<void> _loadSavedLanguage() async {
                         ],
                       ),
                     ),
-
                   ],
                 ),
               ),
@@ -404,32 +500,44 @@ Future<void> _loadSavedLanguage() async {
                       ),
                       DropdownButton<String>(
                         value: selectedLanguage,
-                        icon: const Icon(Icons.expand_more, color: Color(0xFF755700)),
-                        elevation: 16,
-                        style: const TextStyle(color: Color(0xFF755700), fontWeight: FontWeight.bold, fontSize: 14),
-                        underline: Container(
-                          height: 0,
+                        icon: const Icon(
+                          Icons.expand_more,
+                          color: Color(0xFF755700),
                         ),
+                        elevation: 16,
+                        style: const TextStyle(
+                          color: Color(0xFF755700),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        underline: Container(height: 0),
                         onChanged: (String? value) {
                           if (value == null) return;
                           setState(() {
                             selectedLanguage = value;
                           });
                           SharedPreferences.getInstance().then(
-                            (prefs) => prefs.setString(Kconstants.battleLanguageKey, value),
+                            (prefs) => prefs.setString(
+                              Kconstants.battleLanguageKey,
+                              value,
+                            ),
                           );
                         },
                         items: filteredLanguages.map((e) {
                           final key = e.value;
-                          final label = {
-                            "languageEnglish": loc.languageEnglish,
-                            "languageGerman": loc.languageGerman,
-                            "languageFrench": loc.languageFrench,
-                            "languageRomanian": loc.languageRomanian,
-                          }[key] ?? e.key;
+                          final label =
+                              {
+                                "languageEnglish": loc.languageEnglish,
+                                "languageGerman": loc.languageGerman,
+                                "languageFrench": loc.languageFrench,
+                                "languageRomanian": loc.languageRomanian,
+                              }[key] ??
+                              e.key;
                           return DropdownMenuItem<String>(
                             value: e.key,
-                            child: Text(label), // Show languages instead of "change"
+                            child: Text(
+                              label,
+                            ), // Show languages instead of "change"
                           );
                         }).toList(),
                       ),
@@ -478,11 +586,11 @@ Future<void> _loadSavedLanguage() async {
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -495,7 +603,9 @@ Future<void> _loadSavedLanguage() async {
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCDDD7), // surface-container-highest
+                      color: const Color(
+                        0xFFDCDDD7,
+                      ), // surface-container-highest
                       borderRadius: BorderRadius.circular(32),
                     ),
                     child: Column(
@@ -528,7 +638,7 @@ Future<void> _loadSavedLanguage() async {
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -538,7 +648,9 @@ Future<void> _loadSavedLanguage() async {
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCDDD7), // surface-container-highest
+                      color: const Color(
+                        0xFFDCDDD7,
+                      ), // surface-container-highest
                       borderRadius: BorderRadius.circular(32),
                     ),
                     child: Column(
@@ -571,7 +683,7 @@ Future<void> _loadSavedLanguage() async {
                             fontWeight: FontWeight.w500,
                             fontSize: 14,
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -586,7 +698,10 @@ Future<void> _loadSavedLanguage() async {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: const Color(0xFF755700).withOpacity(0.05), width: 2),
+                border: Border.all(
+                  color: const Color(0xFF755700).withOpacity(0.05),
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF755700).withOpacity(0.12),
@@ -597,7 +712,8 @@ Future<void> _loadSavedLanguage() async {
               ),
               child: Column(
                 children: [
-                  
+                  const SizedBox(height: 24),
+                  _buildModeSelector(),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -611,12 +727,17 @@ Future<void> _loadSavedLanguage() async {
                       minimumSize: const Size(double.infinity, 64),
                     ),
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) {
-                        return BattleScreen(
-                          battleService: widget.battleService,
-                          language: selectedLanguage,
-                        );
-                      }));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) {
+                            return _buildBattleScreen(
+                              language: selectedLanguage,
+                              mode: selectedMode,
+                            );
+                          },
+                        ),
+                      );
                     },
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -644,12 +765,10 @@ Future<void> _loadSavedLanguage() async {
                       color: Color(0xFF5A5C58),
                       letterSpacing: -0.5,
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-            
-           
           ],
         ),
       ),

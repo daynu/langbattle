@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 
-/// Reusable square avatar widget.
-/// Shows the profile picture if [base64Image] is provided,
-/// otherwise falls back to coloured initials from [name].
 class UserAvatar extends StatelessWidget {
   final String name;
   final String? base64Image;
@@ -57,7 +55,7 @@ class UserAvatar extends StatelessWidget {
   }
 }
 
-class _ImageAvatar extends StatelessWidget {
+class _ImageAvatar extends StatefulWidget {
   final String base64Image;
   final Color fallbackColor;
   final String initials;
@@ -69,18 +67,41 @@ class _ImageAvatar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  State<_ImageAvatar> createState() => _ImageAvatarState();
+}
+
+class _ImageAvatarState extends State<_ImageAvatar> {
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
     try {
-      final bytes = base64Decode(base64Image);
-      return Image.memory(
-        bytes,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            _InitialsAvatar(color: fallbackColor, initials: initials, size: double.infinity),
-      );
+      _bytes = base64Decode(widget.base64Image);
     } catch (_) {
-      return _InitialsAvatar(color: fallbackColor, initials: initials, size: double.infinity);
+      _bytes = null;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_bytes == null) {
+      return _InitialsAvatar(
+        color: widget.fallbackColor,
+        initials: widget.initials,
+        size: double.infinity,
+      );
+    }
+    return Image.memory(
+      _bytes!,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => _InitialsAvatar(
+        color: widget.fallbackColor,
+        initials: widget.initials,
+        size: double.infinity,
+      ),
+    );
   }
 }
 

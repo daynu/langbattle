@@ -63,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage>
       if (type == 'friends_list' ||
           type == 'friend_added' ||
           type == 'friend_removed' ||
-          type == 'search_players_result') {
+          type == 'search_players_result' || type == 'auth_success') {
         setState(() {});
       }
       if (type == 'game_history') {

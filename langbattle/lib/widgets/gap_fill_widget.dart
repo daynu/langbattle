@@ -26,56 +26,112 @@ class _GapFillWidgetState extends State<GapFillWidget> {
       children: [
         Wrap(
           alignment: WrapAlignment.center,
-          children: List.generate(parts.length, (index) {
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(parts[index], style: const TextStyle(fontSize: 20)),
-                if (index < parts.length - 1)
-                  Container(
-                    width: 80,
-                    height: 30,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      border: Border.all(),
-                    ),
-                    child: Text(
-                      selectedAnswers.length > index
-                          ? selectedAnswers[index]
-                          : "___",
-                    ),
+          spacing: 8,
+          runSpacing: 12,
+          children: List.generate(parts.length * 2 - 1, (i) {
+            if (i.isEven) {
+              final text = parts[i ~/ 2].trim();
+              if (text.isEmpty) return const SizedBox.shrink();
+              return Text(
+                text, 
+                style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  color: Color(0xFF2D2F2C),
+                )
+              );
+            } else {
+              final index = i ~/ 2;
+              return Container(
+                width: 100,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: const Color(0xFFFDC003), width: 4)),
+                ),
+                child: Text(
+                  selectedAnswers.length > index ? selectedAnswers[index] : "",
+                  style: const TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: Color(0xFF755700),
                   ),
-              ],
-            );
+                ),
+              );
+            }
           }),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 32),
 
         Wrap(
-          spacing: 8,
-          children: (widget.question.options ?? []).map((option) {  // 👈 remove the !
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: (widget.question.options ?? []).map((option) {
+            final isSelected = selectedAnswers.contains(option);
             return ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isSelected ? const Color(0xFFE2E3DD) : const Color(0xFFF1F1EC),
+                foregroundColor: const Color(0xFF2D2F2C),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Colors.transparent, width: 2),
+                ),
+              ),
               onPressed: () {
-                if (!selectedAnswers.contains(option)) {
+                if (!isSelected) {
                   setState(() {
                     selectedAnswers.add(option);
                   });
                 }
               },
-              child: Text(option),
+              child: Text(
+                option,
+                style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
             );
           }).toList(),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
 
-        ElevatedButton(
-          onPressed: () {
-            widget.onSubmit(selectedAnswers);
-          },
-          child: const Text("Submit"),
+        InkWell(
+          onTap: () => widget.onSubmit(selectedAnswers),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDC003),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0xFF755700),
+                  offset: Offset(0, 4),
+                )
+              ],
+            ),
+            child: const Text(
+              "SUBMIT ANSWER",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                letterSpacing: 2.0,
+                color: Color(0xFF553E00),
+              ),
+            ),
+          ),
         )
       ],
     );

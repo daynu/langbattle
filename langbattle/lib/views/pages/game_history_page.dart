@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:langbattle/objects/game_record.dart';
 import 'package:langbattle/services/web-socket.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 
 class GameHistoryPage extends StatefulWidget {
   final BattleService battleService;
@@ -22,13 +23,6 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
   String? _selectedLanguage; // null = all
   StreamSubscription<Map<String, dynamic>>? _sub;
   bool _loading = false;
-
-  static const Map<String, String> _languageFlags = {
-    'english': '🇬🇧',
-    'german': '🇩🇪',
-    'french': '🇫🇷',
-    'romanian': '🇷🇴',
-  };
 
   static const List<String> _languages = ['english', 'german', 'french'];
 
@@ -78,9 +72,7 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
     final filtered = _filtered;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Game History'),
-      ),
+      appBar: AppBar(title: const Text('Game History')),
       body: Column(
         children: [
           // Language filter chips
@@ -96,21 +88,23 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
                     onSelected: (_) => setState(() => _selectedLanguage = null),
                   ),
                   const SizedBox(width: 8),
-                  ..._languages.map((lang) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          avatar: Text(
-                            _languageFlags[lang] ?? '',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          label: Text(
-                            lang[0].toUpperCase() + lang.substring(1),
-                          ),
-                          selected: _selectedLanguage == lang,
-                          onSelected: (_) =>
-                              setState(() => _selectedLanguage = lang),
+                  ..._languages.map(
+                    (lang) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        avatar: LanguageFlag(
+                          language: lang,
+                          width: 24,
+                          height: 18,
+                          borderRadius: 5,
                         ),
-                      )),
+                        label: Text(lang[0].toUpperCase() + lang.substring(1)),
+                        selected: _selectedLanguage == lang,
+                        onSelected: (_) =>
+                            setState(() => _selectedLanguage = lang),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -123,26 +117,23 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : filtered.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No games found.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1, indent: 16, endIndent: 16),
-                        itemBuilder: (context, index) {
-                          return _GameTile(
-                            game: filtered[index],
-                            myId: myId,
-                          );
-                        },
+                ? Center(
+                    child: Text(
+                      'No games found.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                    itemBuilder: (context, index) {
+                      return _GameTile(game: filtered[index], myId: myId);
+                    },
+                  ),
           ),
         ],
       ),
@@ -153,13 +144,6 @@ class _GameHistoryPageState extends State<GameHistoryPage> {
 class _GameTile extends StatelessWidget {
   final GameRecord game;
   final String myId;
-
-  static const Map<String, String> _languageFlags = {
-    'english': '🇬🇧',
-    'german': '🇩🇪',
-    'french': '🇫🇷',
-    'romanian': '🇷🇴',
-  };
 
   const _GameTile({required this.game, required this.myId});
 
@@ -175,8 +159,6 @@ class _GameTile extends StatelessWidget {
     final won = game.didWin(myId);
     final draw = game.isDraw(myId);
     final ratingDelta = me.ratingAfter - me.ratingBefore;
-    final flag = _languageFlags[game.language.toLowerCase()] ?? '🌐';
-
     Color resultColor;
     String resultLabel;
     if (draw) {
@@ -190,10 +172,10 @@ class _GameTile extends StatelessWidget {
       resultLabel = 'Loss';
     }
 
-    final deltaColor =
-        ratingDelta >= 0 ? Colors.green.shade600 : colorScheme.error;
-    final deltaText =
-        ratingDelta >= 0 ? '+$ratingDelta' : '$ratingDelta';
+    final deltaColor = ratingDelta >= 0
+        ? Colors.green.shade600
+        : colorScheme.error;
+    final deltaText = ratingDelta >= 0 ? '+$ratingDelta' : '$ratingDelta';
 
     // Format date
     final now = DateTime.now();
@@ -214,8 +196,12 @@ class _GameTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          // Flag
-          Text(flag, style: const TextStyle(fontSize: 28)),
+          LanguageFlag(
+            language: game.language,
+            width: 44,
+            height: 32,
+            borderRadius: 10,
+          ),
           const SizedBox(width: 14),
 
           // Opponent name + rating
@@ -225,8 +211,9 @@ class _GameTile extends StatelessWidget {
               children: [
                 Text(
                   opp.name,
-                  style: theme.textTheme.bodyLarge
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -252,8 +239,9 @@ class _GameTile extends StatelessWidget {
             children: [
               Text(
                 '${me.score} - ${opp.score}',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 2),
               Text(

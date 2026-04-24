@@ -48,7 +48,7 @@
             "opponentScore": { "type": "int" }
         }
     },
-    "gameOverSummary": "Spiel vorbei!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+    "gameOverSummary": "Spiel vorbei!\n{meName}: {meScore} | {opponentName}: {opponentScore}",
     "@gameOverSummary": {
         "description": "Zusammenfassung nach Spielende mit den Punkteständen",
         "placeholders": {
@@ -59,7 +59,7 @@
         }
     },
     "returnToHome": "Zurück zum Start",
-    "youFinishedWaitingOpponent": "Du hast alle Fragen beendet.\\nWarte, bis der Gegner fertig ist...",
+    "youFinishedWaitingOpponent": "Du hast alle Fragen beendet.\nWarte, bis der Gegner fertig ist...",
     "currentScore": "Aktueller Punktestand: {meName} {meScore} - {opponentName} {opponentScore}",
     "@currentScore": {
         "description": "Aktueller Punktestand während des Wartens",

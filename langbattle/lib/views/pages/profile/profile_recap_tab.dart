@@ -3,12 +3,12 @@ import 'package:langbattle/objects/game_record.dart';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/views/pages/profile/profile_widgets.dart';
 import 'package:langbattle/views/pages/welcome_page.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 
 class ProfileRecapTab extends StatelessWidget {
   final BattleService battleService;
   final List<GameRecord> recentGames;
   final bool gamesLoading;
-  final Map<String, String> flags;
   final void Function(String language) onLanguageTap;
 
   const ProfileRecapTab({
@@ -16,7 +16,6 @@ class ProfileRecapTab extends StatelessWidget {
     required this.battleService,
     required this.recentGames,
     required this.gamesLoading,
-    required this.flags,
     required this.onLanguageTap,
   });
 
@@ -49,30 +48,41 @@ class ProfileRecapTab extends StatelessWidget {
                       onTap: () => onLanguageTap(entry.key),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: colorScheme.outlineVariant, width: 0.5),
+                            color: colorScheme.outlineVariant,
+                            width: 0.5,
+                          ),
                         ),
                         child: Column(
                           children: [
-                            Text(flags[entry.key] ?? '🌐',
-                                style: const TextStyle(fontSize: 22)),
+                            LanguageFlag(
+                              language: entry.key,
+                              width: 42,
+                              height: 30,
+                              borderRadius: 9,
+                            ),
                             const SizedBox(height: 6),
                             Text(
                               rating != null ? rating.toString() : '—',
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w500),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               entry.key[0].toUpperCase() +
                                   entry.key.substring(1),
                               style: TextStyle(
-                                  fontSize: 11,
-                                  color: colorScheme.onSurfaceVariant),
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -91,7 +101,6 @@ class ProfileRecapTab extends StatelessWidget {
             battleService: battleService,
             games: recentGames,
             loading: gamesLoading,
-            flags: flags,
           ),
 
           const SizedBox(height: 20),
@@ -116,13 +125,11 @@ class _RecentGamesCard extends StatelessWidget {
   final BattleService battleService;
   final List<GameRecord> games;
   final bool loading;
-  final Map<String, String> flags;
 
   const _RecentGamesCard({
     required this.battleService,
     required this.games,
     required this.loading,
-    required this.flags,
   });
 
   @override
@@ -152,16 +159,13 @@ class _RecentGamesCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   'No games played yet.',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               )
             else
-              ...games.map((game) => GameTileCompact(
-                    game: game,
-                    myId: myId,
-                    flags: flags,
-                  )),
+              ...games.map((game) => GameTileCompact(game: game, myId: myId)),
           ],
         ),
       ),

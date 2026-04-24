@@ -48,7 +48,7 @@
             "opponentScore": { "type": "int" }
         }
     },
-    "gameOverSummary": "Game Over!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+    "gameOverSummary": "Game Over!\n{meName}: {meScore} | {opponentName}: {opponentScore}",
     "@gameOverSummary": {
         "description": "Game over summary with both scores",
         "placeholders": {
@@ -59,7 +59,7 @@
         }
     },
     "returnToHome": "Return to Home",
-    "youFinishedWaitingOpponent": "You have completed all questions.\\nWaiting for opponent to finish...",
+    "youFinishedWaitingOpponent": "You have completed all questions.\nWaiting for opponent to finish...",
     "currentScore": "Current score: {meName} {meScore} - {opponentName} {opponentScore}",
     "@currentScore": {
         "description": "Current score line while waiting",

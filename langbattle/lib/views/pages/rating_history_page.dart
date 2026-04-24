@@ -2,19 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:langbattle/services/web-socket.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 
 class RatingHistoryPage extends StatefulWidget {
   final BattleService battleService;
   final String language;
   final String languageLabel;
-  final String flag;
 
   const RatingHistoryPage({
     super.key,
     required this.battleService,
     required this.language,
     required this.languageLabel,
-    required this.flag,
   });
 
   @override
@@ -79,12 +78,12 @@ class _RatingHistoryPageState extends State<RatingHistoryPage> {
         setState(() {
           _allEntries = raw.map((e) {
             final map = Map<String, dynamic>.from(e);
-            final date = DateTime.tryParse(map['date']?.toString() ?? '') ??
+            final date =
+                DateTime.tryParse(map['date']?.toString() ?? '') ??
                 DateTime.now();
             final rating = (map['rating'] as num?)?.toInt() ?? 0;
             return _RatingEntry(date, rating);
-          }).toList()
-            ..sort((a, b) => a.date.compareTo(b.date));
+          }).toList()..sort((a, b) => a.date.compareTo(b.date));
           _loading = false;
         });
       }
@@ -129,7 +128,12 @@ class _RatingHistoryPageState extends State<RatingHistoryPage> {
       appBar: AppBar(
         title: Row(
           children: [
-            Text(widget.flag, style: const TextStyle(fontSize: 20)),
+            LanguageFlag(
+              language: widget.language,
+              width: 32,
+              height: 22,
+              borderRadius: 6,
+            ),
             const SizedBox(width: 8),
             Text('${widget.languageLabel} Rating'),
           ],
@@ -174,9 +178,11 @@ class _RatingHistoryPageState extends State<RatingHistoryPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.bar_chart_rounded,
-                                size: 40,
-                                color: colorScheme.onSurfaceVariant),
+                            Icon(
+                              Icons.bar_chart_rounded,
+                              size: 40,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'No games in this period',
@@ -251,11 +257,13 @@ class _EloChartState extends State<_EloChart> {
     final colorScheme = theme.colorScheme;
     final entries = widget.entries;
 
-    final minY = (entries.map((e) => e.rating).reduce((a, b) => a < b ? a : b) - 50)
-        .toDouble()
-        .clamp(0, double.infinity);
-    final maxY = (entries.map((e) => e.rating).reduce((a, b) => a > b ? a : b) + 50)
-        .toDouble();
+    final minY =
+        (entries.map((e) => e.rating).reduce((a, b) => a < b ? a : b) - 50)
+            .toDouble()
+            .clamp(0, double.infinity);
+    final maxY =
+        (entries.map((e) => e.rating).reduce((a, b) => a > b ? a : b) + 50)
+            .toDouble();
 
     final spots = entries.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value.rating.toDouble());
@@ -292,7 +300,9 @@ class _EloChartState extends State<_EloChart> {
                 getTitlesWidget: (value, _) => Text(
                   value.toInt().toString(),
                   style: TextStyle(
-                      fontSize: 11, color: colorScheme.onSurfaceVariant),
+                    fontSize: 11,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
@@ -311,22 +321,25 @@ class _EloChartState extends State<_EloChart> {
                     child: Text(
                       _formatDate(entries[idx].date),
                       style: TextStyle(
-                          fontSize: 10, color: colorScheme.onSurfaceVariant),
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           lineTouchData: LineTouchData(
             touchCallback: (event, response) {
               setState(() {
-                _touchedIndex =
-                    response?.lineBarSpots?.first.spotIndex;
+                _touchedIndex = response?.lineBarSpots?.first.spotIndex;
               });
             },
             touchTooltipData: LineTouchTooltipData(

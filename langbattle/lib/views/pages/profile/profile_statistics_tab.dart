@@ -4,27 +4,38 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:langbattle/objects/game_record.dart';
 import 'package:langbattle/services/web-socket.dart';
 import 'package:langbattle/views/pages/profile/profile_widgets.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 
 enum TimeFilter { week, month, threeMonths, year, allTime }
 
 extension TimeFilterExt on TimeFilter {
   String get label {
     switch (this) {
-      case TimeFilter.week:        return '7d';
-      case TimeFilter.month:       return '30d';
-      case TimeFilter.threeMonths: return '90d';
-      case TimeFilter.year:        return '1y';
-      case TimeFilter.allTime:     return 'All';
+      case TimeFilter.week:
+        return '7d';
+      case TimeFilter.month:
+        return '30d';
+      case TimeFilter.threeMonths:
+        return '90d';
+      case TimeFilter.year:
+        return '1y';
+      case TimeFilter.allTime:
+        return 'All';
     }
   }
 
   Duration? get duration {
     switch (this) {
-      case TimeFilter.week:        return const Duration(days: 7);
-      case TimeFilter.month:       return const Duration(days: 30);
-      case TimeFilter.threeMonths: return const Duration(days: 90);
-      case TimeFilter.year:        return const Duration(days: 365);
-      case TimeFilter.allTime:     return null;
+      case TimeFilter.week:
+        return const Duration(days: 7);
+      case TimeFilter.month:
+        return const Duration(days: 30);
+      case TimeFilter.threeMonths:
+        return const Duration(days: 90);
+      case TimeFilter.year:
+        return const Duration(days: 365);
+      case TimeFilter.allTime:
+        return null;
     }
   }
 }
@@ -38,12 +49,10 @@ class RatingEntry {
 class ProfileStatisticsTab extends StatefulWidget {
   final BattleService battleService;
   final ValueNotifier<String?> languageNotifier;
-  final Map<String, String> flags;
 
   const ProfileStatisticsTab({
     super.key,
     required this.battleService,
-    required this.flags,
     required this.languageNotifier,
   });
 
@@ -79,11 +88,10 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
             final map = Map<String, dynamic>.from(e);
             final date =
                 DateTime.tryParse(map['date']?.toString() ?? '') ??
-                    DateTime.now();
+                DateTime.now();
             final rating = (map['rating'] as num?)?.toInt() ?? 0;
             return RatingEntry(date, rating);
-          }).toList()
-            ..sort((a, b) => a.date.compareTo(b.date));
+          }).toList()..sort((a, b) => a.date.compareTo(b.date));
           _loadingHistory = false;
         });
       }
@@ -91,8 +99,7 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
         final raw = event['games'] as List? ?? [];
         setState(() {
           _languageGames = raw
-              .map((g) =>
-                  GameRecord.fromJson(Map<String, dynamic>.from(g)))
+              .map((g) => GameRecord.fromJson(Map<String, dynamic>.from(g)))
               .where((g) => g.language == _selectedLanguage)
               .take(5)
               .toList();
@@ -168,8 +175,12 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
                 value: lang,
                 child: Row(
                   children: [
-                    Text(widget.flags[lang] ?? '🌐',
-                        style: const TextStyle(fontSize: 18)),
+                    LanguageFlag(
+                      language: lang,
+                      width: 30,
+                      height: 22,
+                      borderRadius: 6,
+                    ),
                     const SizedBox(width: 8),
                     Text(lang[0].toUpperCase() + lang.substring(1)),
                   ],
@@ -205,21 +216,24 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
           const SizedBox(height: 20),
 
           if (_loadingHistory)
-            _emptyBox(colorScheme,
-                child: const CircularProgressIndicator())
+            _emptyBox(colorScheme, child: const CircularProgressIndicator())
           else if (!hasGraph)
             _emptyBox(
               colorScheme,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bar_chart_rounded,
-                      size: 40, color: colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.bar_chart_rounded,
+                    size: 40,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'No games in this period',
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -235,8 +249,7 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
                 Expanded(
                   child: StatCard(
                     label: 'Current',
-                    value:
-                        (user.ratings[_selectedLanguage] ?? '—').toString(),
+                    value: (user.ratings[_selectedLanguage] ?? '—').toString(),
                     color: colorScheme.primary,
                   ),
                 ),
@@ -263,8 +276,7 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
 
           Text(
             'Recent ${_selectedLanguage[0].toUpperCase()}${_selectedLanguage.substring(1)} games',
-            style:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
@@ -280,16 +292,18 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 'No games played in this language yet.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             )
           else
-            ..._languageGames.map((game) => GameTileCompact(
-                  game: game,
-                  myId: widget.battleService.currentUser?.userId ?? '',
-                  flags: widget.flags,
-                )),
+            ..._languageGames.map(
+              (game) => GameTileCompact(
+                game: game,
+                myId: widget.battleService.currentUser?.userId ?? '',
+              ),
+            ),
         ],
       ),
     );
@@ -326,13 +340,12 @@ class _EloChartState extends State<EloChart> {
     final colorScheme = Theme.of(context).colorScheme;
     final entries = widget.entries;
 
-    final minY = (entries
-                .map((e) => e.rating)
-                .reduce((a, b) => a < b ? a : b) -
-            50)
-        .toDouble()
-        .clamp(0.0, double.infinity);
-    final maxY = entries
+    final minY =
+        (entries.map((e) => e.rating).reduce((a, b) => a < b ? a : b) - 50)
+            .toDouble()
+            .clamp(0.0, double.infinity);
+    final maxY =
+        entries
             .map((e) => e.rating)
             .reduce((a, b) => a > b ? a : b)
             .toDouble() +
@@ -376,7 +389,9 @@ class _EloChartState extends State<EloChart> {
                 getTitlesWidget: (value, _) => Text(
                   value.toInt().toString(),
                   style: TextStyle(
-                      fontSize: 11, color: colorScheme.onSurfaceVariant),
+                    fontSize: 11,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
@@ -395,23 +410,25 @@ class _EloChartState extends State<EloChart> {
                     child: Text(
                       _formatDate(entries[idx].date),
                       style: TextStyle(
-                          fontSize: 10,
-                          color: colorScheme.onSurfaceVariant),
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   );
                 },
               ),
             ),
             topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false)),
+              sideTitles: SideTitles(showTitles: false),
+            ),
             rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false)),
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           lineTouchData: LineTouchData(
             touchCallback: (event, response) {
               setState(() {
-                _touchedIndex =
-                    response?.lineBarSpots?.first.x.toInt();
+                _touchedIndex = response?.lineBarSpots?.first.x.toInt();
               });
             },
             touchTooltipData: LineTouchTooltipData(
@@ -429,8 +446,7 @@ class _EloChartState extends State<EloChart> {
                     TextSpan(
                       text: _formatDate(entry.date),
                       style: TextStyle(
-                        color:
-                            colorScheme.onPrimaryContainer.withOpacity(0.8),
+                        color: colorScheme.onPrimaryContainer.withOpacity(0.8),
                         fontSize: 11,
                         fontWeight: FontWeight.normal,
                       ),
@@ -454,8 +470,7 @@ class _EloChartState extends State<EloChart> {
                     spot.x.toInt() == _touchedIndex ||
                     spot.x.toInt() == spots.length - 1,
                 getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
-                  radius:
-                      spot.x.toInt() == spots.length - 1 ? 4 : 5,
+                  radius: spot.x.toInt() == spots.length - 1 ? 4 : 5,
                   color: colorScheme.primary,
                   strokeWidth: 2,
                   strokeColor: colorScheme.surface,

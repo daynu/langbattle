@@ -156,7 +156,7 @@ abstract class AppLocalizations {
   /// Game over summary with both scores
   ///
   /// In en, this message translates to:
-  /// **'Game Over!\\n{meName}: {meScore} | {opponentName}: {opponentScore}'**
+  /// **'Game Over!\n{meName}: {meScore} | {opponentName}: {opponentScore}'**
   String gameOverSummary(String meName, int meScore, String opponentName, int opponentScore);
 
   /// No description provided for @returnToHome.
@@ -169,7 +169,7 @@ abstract class AppLocalizations {
   /// No description provided for @youFinishedWaitingOpponent.
   ///
   /// In en, this message translates to:
-  /// **'You have completed all questions.\\nWaiting for opponent to finish...'**
+  /// **'You have completed all questions.\nWaiting for opponent to finish...'**
   String get youFinishedWaitingOpponent;
 
   /// Current score line while waiting

@@ -7,6 +7,7 @@ import 'package:langbattle/views/pages/battle_page.dart';
 import 'package:langbattle/views/pages/profile/profile_page.dart';
 import 'package:langbattle/views/pages/notifications_page.dart';
 import 'package:langbattle/views/pages/word_chain_battle_page.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
 import 'package:langbattle/extensions/context_extensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -269,31 +270,24 @@ class _HomePageState extends State<HomePage> {
       selectedLanguage = filteredLanguages.first.key;
     }
 
-    // Flag emojis
-    final flags = {
-      'english': '🇬🇧',
-      'german': '🇩🇪',
-      'french': '🇫🇷',
-      'romanian': '🇷🇴',
-    };
-    final currentFlag = flags[selectedLanguage] ?? '🇪🇸';
-
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.only(
-          top: 10,
-          left: 24,
-          right: 24,
-          bottom: 80,
-        ),
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F7F2), // bg-background
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.battleService.activeRoom != null)
-              _buildActiveGameBanner(context),
+    return SafeArea(
+      bottom: false,
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.only(
+            top: 18,
+            left: 24,
+            right: 24,
+            bottom: 80,
+          ),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF7F7F2), // bg-background
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.battleService.activeRoom != null)
+                _buildActiveGameBanner(context),
 
             // Notifications Icon (moved from App Bar since user wants Settings as is)
             Row(
@@ -546,25 +540,11 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFDC003),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0xFF755700),
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            currentFlag,
-                            style: const TextStyle(fontSize: 30),
-                          ),
-                        ),
+                      LanguageFlag(
+                        language: selectedLanguage,
+                        width: 76,
+                        height: 54,
+                        borderRadius: 14,
                       ),
                       const SizedBox(width: 20),
                       Column(
@@ -769,7 +749,8 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

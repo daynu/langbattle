@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:langbattle/objects/game_record.dart';
+import 'package:langbattle/widgets/language_flag.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
 
 class GameTileCompact extends StatelessWidget {
   final GameRecord game;
   final String myId;
-  final Map<String, String> flags;
 
-  const GameTileCompact({
-    super.key,
-    required this.game,
-    required this.myId,
-    required this.flags,
-  });
+  const GameTileCompact({super.key, required this.game, required this.myId});
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +20,6 @@ class GameTileCompact extends StatelessWidget {
     final won = game.didWin(myId);
     final draw = game.isDraw(myId);
     final delta = me.ratingAfter - me.ratingBefore;
-    final flag = flags[game.language.toLowerCase()] ?? '🌐';
-
     Color resultColor;
     String resultLabel;
     if (draw) {
@@ -40,14 +33,18 @@ class GameTileCompact extends StatelessWidget {
       resultLabel = 'Loss';
     }
 
-    final deltaColor =
-        delta >= 0 ? Colors.green.shade600 : colorScheme.error;
+    final deltaColor = delta >= 0 ? Colors.green.shade600 : colorScheme.error;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Row(
         children: [
-          Text(flag, style: const TextStyle(fontSize: 24)),
+          LanguageFlag(
+            language: game.language,
+            width: 38,
+            height: 28,
+            borderRadius: 8,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -61,13 +58,15 @@ class GameTileCompact extends StatelessWidget {
                 ),
                 Text(
                   opp.name,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(
                   'Rating: ${opp.ratingBefore}',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -77,18 +76,23 @@ class GameTileCompact extends StatelessWidget {
             children: [
               Text(
                 '${me.score} - ${opp.score}',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 resultLabel,
                 style: theme.textTheme.bodySmall?.copyWith(
-                    color: resultColor, fontWeight: FontWeight.w600),
+                  color: resultColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(
                 delta >= 0 ? '+$delta' : '$delta',
                 style: theme.textTheme.bodySmall?.copyWith(
-                    color: deltaColor, fontWeight: FontWeight.w600),
+                  color: deltaColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -125,14 +129,17 @@ class StatCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold, color: color),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),

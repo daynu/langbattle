@@ -45,7 +45,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String gameOverSummary(String meName, int meScore, String opponentName, int opponentScore) {
-    return 'Game Over!\\n$meName: $meScore | $opponentName: $opponentScore';
+    return 'Game Over!\n$meName: $meScore | $opponentName: $opponentScore';
   }
 
   @override
@@ -53,7 +53,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewAnswers => 'Review Answers';
 
   @override
-  String get youFinishedWaitingOpponent => 'You have completed all questions.\\nWaiting for opponent to finish...';
+  String get youFinishedWaitingOpponent => 'You have completed all questions.\nWaiting for opponent to finish...';
 
   @override
   String currentScore(String meName, int meScore, String opponentName, int opponentScore) {

@@ -23,7 +23,7 @@ class BattleService {
   /// Connect to the Socket.IO server
   Future<void> connect() async {
     socket = IO.io(
-      'http://localhost:3000',
+      'https://lang-server-7bfu.onrender.com',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
@@ -291,7 +291,7 @@ class BattleService {
       "email": email,
       "password": password,
       "name": name,
-      "selectedLanguage": language,
+      "language": language,
       "startingRating": startingRating,
     });
   }

@@ -48,7 +48,7 @@
       "opponentScore": { "type": "int" }
     }
   },
-  "gameOverSummary": "Joc terminat!\\n{meName}: {meScore} | {opponentName}: {opponentScore}",
+  "gameOverSummary": "Joc terminat!\n{meName}: {meScore} | {opponentName}: {opponentScore}",
   "@gameOverSummary": {
     "description": "Rezumat la finalul jocului cu scorurile",
     "placeholders": {
@@ -59,7 +59,7 @@
     }
   },
   "returnToHome": "Înapoi la acasă",
-  "youFinishedWaitingOpponent": "Ai terminat toate întrebările.\\nSe așteaptă ca adversarul să termine...",
+  "youFinishedWaitingOpponent": "Ai terminat toate întrebările.\nSe așteaptă ca adversarul să termine...",
   "currentScore": "Scor curent: {meName} {meScore} - {opponentName} {opponentScore}",
   "@currentScore": {
     "description": "Linie de scor curent în timp ce se așteaptă",

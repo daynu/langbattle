@@ -49,14 +49,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String gameOverSummary(String meName, int meScore, String opponentName, int opponentScore) {
-    return 'Joc terminat!\\n$meName: $meScore | $opponentName: $opponentScore';
+    return 'Joc terminat!\n$meName: $meScore | $opponentName: $opponentScore';
   }
 
   @override
   String get returnToHome => 'Înapoi la acasă';
 
   @override
-  String get youFinishedWaitingOpponent => 'Ai terminat toate întrebările.\\nSe așteaptă ca adversarul să termine...';
+  String get youFinishedWaitingOpponent => 'Ai terminat toate întrebările.\nSe așteaptă ca adversarul să termine...';
 
   @override
   String currentScore(String meName, int meScore, String opponentName, int opponentScore) {

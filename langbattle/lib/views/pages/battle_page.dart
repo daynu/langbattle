@@ -7,7 +7,6 @@ import 'package:langbattle/widgets/gap_fill_widget.dart';
 import 'review_answers_screen.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
 
-
 class BattleScreen extends StatefulWidget {
   final BattleService battleService;
   final String language;
@@ -46,7 +45,7 @@ class _BattleScreenState extends State<BattleScreen> {
   Map<String, String> myAnswers = {};
   String? opponentAvatar;
   String? myAvatar;
-  String? myName;  
+  String? myName;
 
   @override
   void initState() {
@@ -68,7 +67,10 @@ class _BattleScreenState extends State<BattleScreen> {
       isWaitingForOpponent = false;
       _startTimerForCurrentQuestion();
     } else {
-      widget.battleService.joinQueue(language: widget.language, mode: widget.mode);
+      widget.battleService.joinQueue(
+        language: widget.language,
+        mode: widget.mode,
+      );
       _waitTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted && isWaitingForOpponent) {
           setState(() => waitSeconds++);
@@ -112,13 +114,14 @@ class _BattleScreenState extends State<BattleScreen> {
       }
 
       if (data["type"] == "match_found") {
-        if(isWaitingForOpponent == false) return;
+        if (isWaitingForOpponent == false) return;
         print("Match found: ${data["roomId"]}");
         final players = data["players"] as List<dynamic>;
         final myUserId = widget.battleService.currentUser?.userId;
         final opponent = players.firstWhere(
-            (p) => p["userId"]?.toString() != myUserId,
-            orElse: () => players.last);
+          (p) => p["userId"]?.toString() != myUserId,
+          orElse: () => players.last,
+        );
         questions = (data["questions"] as List)
             .map((q) => Question.fromJson(q))
             .toList();
@@ -229,11 +232,59 @@ class _BattleScreenState extends State<BattleScreen> {
     }
   }
 
+  Widget _buildWaitingScoreTile({
+    required String name,
+    required String? base64Image,
+    required int score,
+    required Color accentColor,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: accentColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: UserAvatar(
+            name: name,
+            base64Image: base64Image,
+            size: 62,
+            borderRadius: 16,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            letterSpacing: 0,
+            color: Color(0xFF2D2F2C),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "$score",
+          style: const TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+            fontWeight: FontWeight.w900,
+            fontSize: 28,
+            letterSpacing: 0,
+            color: Color(0xFF2D2F2C),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = context.loc;
-    BattleService battleService = widget.battleService;
-
 
     if (isWaitingForOpponent) {
       final String formattedTime =
@@ -246,7 +297,10 @@ class _BattleScreenState extends State<BattleScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16.0,
+                ),
                 child: Row(
                   children: [
                     const Text(
@@ -262,7 +316,7 @@ class _BattleScreenState extends State<BattleScreen> {
                   ],
                 ),
               ),
-              
+
               Expanded(
                 child: Center(
                   child: Padding(
@@ -273,30 +327,44 @@ class _BattleScreenState extends State<BattleScreen> {
                         // Main Card
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24.0),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 40.0,
+                            horizontal: 24.0,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(40),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF755700).withOpacity(0.08),
+                                color: const Color(
+                                  0xFF755700,
+                                ).withOpacity(0.08),
                                 blurRadius: 40,
                                 offset: const Offset(0, 20),
-                              )
+                              ),
                             ],
                           ),
                           child: Column(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF755700).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF755700,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.sports_kabaddi, size: 16, color: Color(0xFF755700)),
+                                    const Icon(
+                                      Icons.sports_kabaddi,
+                                      size: 16,
+                                      color: Color(0xFF755700),
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       "${widget.language.toUpperCase()} BATTLE",
@@ -325,9 +393,14 @@ class _BattleScreenState extends State<BattleScreen> {
                               ),
                               const SizedBox(height: 24),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFAB2D00).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFFAB2D00,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: const Text(
@@ -344,19 +417,25 @@ class _BattleScreenState extends State<BattleScreen> {
                             ],
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // User Info Row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0xFFE8E9E3), width: 2),
+                                border: Border.all(
+                                  color: const Color(0xFFE8E9E3),
+                                  width: 2,
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -392,14 +471,15 @@ class _BattleScreenState extends State<BattleScreen> {
                                 ],
                               ),
                             ),
-                            
+
                             Row(
                               children: [
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      widget.battleService.currentUser?.name ?? "Me",
+                                      widget.battleService.currentUser?.name ??
+                                          "Me",
                                       style: const TextStyle(
                                         fontFamily: 'Plus Jakarta Sans',
                                         fontWeight: FontWeight.w700,
@@ -425,30 +505,42 @@ class _BattleScreenState extends State<BattleScreen> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFDC003),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 3),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 3,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFFDC003).withOpacity(0.4),
+                                        color: const Color(
+                                          0xFFFDC003,
+                                        ).withOpacity(0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
-                                      )
+                                      ),
                                     ],
                                   ),
-                                  child: const Icon(Icons.person, color: Color(0xFF553E00), size: 24),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Color(0xFF553E00),
+                                    size: 24,
+                                  ),
                                 ),
                               ],
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-              
+
               // Footer
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 32.0,
+                ),
                 child: Column(
                   children: [
                     ElevatedButton(
@@ -497,9 +589,15 @@ class _BattleScreenState extends State<BattleScreen> {
     if (gameOver) {
       final bool isVictory = (scores["me"] ?? 0) > (scores["opponent"] ?? 0);
       final bool isDraw = (scores["me"] ?? 0) == (scores["opponent"] ?? 0);
-      final String resultText = isDraw ? "DRAW" : (isVictory ? "VICTORY" : "DEFEAT");
-      final Color resultColor = isDraw ? const Color(0xFFE2E3DD) : (isVictory ? const Color(0xFFFFC107) : const Color(0xFFF95630));
-      final Color onResultColor = isDraw ? const Color(0xFF5A5C58) : (isVictory ? const Color(0xFF553E00) : const Color(0xFF520C00));
+      final String resultText = isDraw
+          ? "DRAW"
+          : (isVictory ? "VICTORY" : "DEFEAT");
+      final Color resultColor = isDraw
+          ? const Color(0xFFE2E3DD)
+          : (isVictory ? const Color(0xFFFFC107) : const Color(0xFFF95630));
+      final Color onResultColor = isDraw
+          ? const Color(0xFF5A5C58)
+          : (isVictory ? const Color(0xFF553E00) : const Color(0xFF520C00));
 
       return Scaffold(
         backgroundColor: const Color(0xFFFBFBF9),
@@ -532,17 +630,23 @@ class _BattleScreenState extends State<BattleScreen> {
                   ],
                 ),
               ),
-              
+
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 48,
+                  ),
                   child: Column(
                     children: [
                       // Victory / Defeat Badge
                       Transform.rotate(
                         angle: -0.0174533, // -1 degree
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 20,
+                          ),
                           decoration: BoxDecoration(
                             color: resultColor,
                             borderRadius: BorderRadius.circular(40),
@@ -551,7 +655,7 @@ class _BattleScreenState extends State<BattleScreen> {
                                 color: resultColor.withOpacity(0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
-                              )
+                              ),
                             ],
                           ),
                           child: Text(
@@ -565,9 +669,9 @@ class _BattleScreenState extends State<BattleScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 40),
-                      
+
                       // Score Card
                       Container(
                         width: double.infinity,
@@ -591,7 +695,7 @@ class _BattleScreenState extends State<BattleScreen> {
                                   isWinner: isVictory || isDraw,
                                   ratingDelta: ratingUpdate?["delta"] as int?,
                                 ),
-                                
+
                                 const Text(
                                   "VS",
                                   style: TextStyle(
@@ -602,23 +706,23 @@ class _BattleScreenState extends State<BattleScreen> {
                                     color: Color(0x335A5C58),
                                   ),
                                 ),
-                                
+
                                 // Opponent
                                 _buildPlayerResultColumn(
                                   name: opponentName ?? "Opponent",
                                   base64Image: opponentAvatar,
                                   score: scores["opponent"] ?? 0,
                                   isWinner: !isVictory || isDraw,
-                                  ratingDelta: null, 
+                                  ratingDelta: null,
                                 ),
                               ],
                             ),
-                            
+
                             if (ratingUpdate != null) ...[
                               const SizedBox(height: 32),
                               const Divider(color: Color(0xFFE8E9E3)),
                               const SizedBox(height: 32),
-                              
+
                               const Text(
                                 "RATING PROGRESSION",
                                 style: TextStyle(
@@ -643,7 +747,11 @@ class _BattleScreenState extends State<BattleScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-                                  const Icon(Icons.arrow_forward, color: Color(0x4D5A5C58), size: 16),
+                                  const Icon(
+                                    Icons.arrow_forward,
+                                    color: Color(0x4D5A5C58),
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 16),
                                   Text(
                                     "${ratingUpdate!["newRating"]}",
@@ -656,13 +764,13 @@ class _BattleScreenState extends State<BattleScreen> {
                                   ),
                                 ],
                               ),
-                            ]
+                            ],
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 48),
-                      
+
                       // Action Buttons
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -731,34 +839,192 @@ class _BattleScreenState extends State<BattleScreen> {
     }
 
     if (iFinished && !opponentFinished) {
+      final myScore = scores["me"] ?? 0;
+      final opponentScore = scores["opponent"] ?? 0;
+
       return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        backgroundColor: const Color(0xFFF7F7F2),
+        body: SafeArea(
+          child: Stack(
             children: [
-              Text(
-                loc.youFinishedWaitingOpponent,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 20),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                loc.currentScore(
-                  widget.battleService.currentUser?.name ?? "Me",
-                  scores["me"] ?? 0,
-                  opponentName ?? "Opponent",
-                  scores["opponent"] ?? 0,
+              Positioned(
+                top: 16,
+                left: 24,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => Navigator.pop(context),
+                    child: Ink(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1EC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFF5A5C58),
+                      ),
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18),
+              ),
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 88, 24, 32),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 448),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 108,
+                          height: 108,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: const Color(0xFFF1F1EC),
+                              width: 6,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1F755700),
+                                blurRadius: 32,
+                                offset: Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 46,
+                              height: 46,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 5,
+                                color: Color(0xFFFDC003),
+                                backgroundColor: Color(0xFFE8E9E3),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 34),
+                        const Text(
+                          "Battle submitted",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 42,
+                            height: 1.1,
+                            letterSpacing: 0,
+                            color: Color(0xFF2D2F2C),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          loc.youFinishedWaitingOpponent,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'Be Vietnam Pro',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                            letterSpacing: 0,
+                            color: Color(0xFF5A5C58),
+                          ),
+                        ),
+                        const SizedBox(height: 34),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFADADA9,
+                              ).withValues(alpha: 0.16),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildWaitingScoreTile(
+                                      name:
+                                          myName ??
+                                          widget
+                                              .battleService
+                                              .currentUser
+                                              ?.name ??
+                                          "Me",
+                                      base64Image: myAvatar,
+                                      score: myScore,
+                                      accentColor: const Color(0xFFFDC003),
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                    ),
+                                    child: Text(
+                                      "VS",
+                                      style: TextStyle(
+                                        fontFamily: 'Plus Jakarta Sans',
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        letterSpacing: 0,
+                                        color: Color(0xFFADADA9),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildWaitingScoreTile(
+                                      name: opponentName ?? "Opponent",
+                                      base64Image: opponentAvatar,
+                                      score: opponentScore,
+                                      accentColor: const Color(0xFFE8E9E3),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F1EC),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Text(
+                                  loc.currentScore(
+                                    widget.battleService.currentUser?.name ??
+                                        "Me",
+                                    myScore,
+                                    opponentName ?? "Opponent",
+                                    opponentScore,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontFamily: 'Be Vietnam Pro',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    letterSpacing: 0,
+                                    color: Color(0xFF5A5C58),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -767,11 +1033,7 @@ class _BattleScreenState extends State<BattleScreen> {
     }
 
     if (questions.isEmpty || currentIndex >= questions.length) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final question = questions[currentIndex];
@@ -792,7 +1054,7 @@ class _BattleScreenState extends State<BattleScreen> {
                     color: const Color(0xFF755700).withOpacity(0.1),
                     blurRadius: 0,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Row(
@@ -817,7 +1079,7 @@ class _BattleScreenState extends State<BattleScreen> {
                 ],
               ),
             ),
-            
+
             // Main Content Area
             Expanded(
               child: Padding(
@@ -829,149 +1091,176 @@ class _BattleScreenState extends State<BattleScreen> {
                         child: Column(
                           children: [
                             // Timer & Round Header
-                    Column(
-                      children: [
-                        SizedBox(
-                          width: 96,
-                          height: 96,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              const CircularProgressIndicator(
-                                value: 1.0,
-                                strokeWidth: 8,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE2E3DD)),
+                            Column(
+                              children: [
+                                SizedBox(
+                                  width: 96,
+                                  height: 96,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      const CircularProgressIndicator(
+                                        value: 1.0,
+                                        strokeWidth: 8,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Color(0xFFE2E3DD),
+                                            ),
+                                      ),
+                                      TweenAnimationBuilder<double>(
+                                        key: ValueKey(question.id),
+                                        tween: Tween<double>(
+                                          begin:
+                                              remainingSeconds /
+                                              question.timeLimit,
+                                          end:
+                                              remainingSeconds /
+                                              question.timeLimit,
+                                        ),
+                                        duration: const Duration(
+                                          milliseconds: 500,
+                                        ),
+                                        builder: (context, value, child) {
+                                          return CircularProgressIndicator(
+                                            value: value,
+                                            strokeWidth: 8,
+                                            valueColor:
+                                                const AlwaysStoppedAnimation<
+                                                  Color
+                                                >(Color(0xFFFDC003)),
+                                            backgroundColor: Colors.transparent,
+                                          );
+                                        },
+                                      ),
+                                      Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              "${remainingSeconds}s",
+                                              style: const TextStyle(
+                                                fontFamily: 'Plus Jakarta Sans',
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 24,
+                                                color: Color(0xFF2D2F2C),
+                                              ),
+                                            ),
+                                            const Text(
+                                              "LEFT",
+                                              style: TextStyle(
+                                                fontFamily: 'Plus Jakarta Sans',
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 10,
+                                                color: Color(0xFF767773),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE2E3DD),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    "BATTLE ROUND ${currentIndex + 1}",
+                                    style: const TextStyle(
+                                      fontFamily: 'Plus Jakarta Sans',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      letterSpacing: 2.0,
+                                      color: Color(0xFF5A5C58),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // Question Card
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF2D2F2C,
+                                    ).withOpacity(0.04),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                               ),
-                              TweenAnimationBuilder<double>(
-                                key: ValueKey(question.id),
-                                tween: Tween<double>(begin: remainingSeconds / question.timeLimit, end: remainingSeconds / question.timeLimit),
-                                duration: const Duration(milliseconds: 500),
-                                builder: (context, value, child) {
-                                  return CircularProgressIndicator(
-                                    value: value,
-                                    strokeWidth: 8,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFDC003)),
-                                    backgroundColor: Colors.transparent,
-                                  );
-                                },
-                              ),
-                              Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      "${remainingSeconds}s",
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.topCenter,
+                                children: [
+                                  Positioned(
+                                    top: -12,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0D6661),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        question.type == 'gap_fill'
+                                            ? "FILL THE GAP"
+                                            : "CHOOSE ANSWER",
+                                        style: const TextStyle(
+                                          fontFamily: 'Plus Jakarta Sans',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 10,
+                                          color: Color(0xFFBEFFF8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(32.0),
+                                    child: Text(
+                                      question.text,
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(
                                         fontFamily: 'Plus Jakarta Sans',
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 22,
+                                        height: 1.5,
                                         color: Color(0xFF2D2F2C),
                                       ),
                                     ),
-                                    const Text(
-                                      "LEFT",
-                                      style: TextStyle(
-                                        fontFamily: 'Plus Jakarta Sans',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 10,
-                                        color: Color(0xFF767773),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE2E3DD),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            "BATTLE ROUND ${currentIndex + 1}",
-                            style: const TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              letterSpacing: 2.0,
-                              color: Color(0xFF5A5C58),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Question Card
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF2D2F2C).withOpacity(0.04),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          )
-                        ],
-                      ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.topCenter,
-                        children: [
-                          Positioned(
-                            top: -12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0D6661),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                question.type == 'gap_fill' ? "FILL THE GAP" : "CHOOSE ANSWER",
-                                style: const TextStyle(
-                                  fontFamily: 'Plus Jakarta Sans',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 10,
-                                  color: Color(0xFFBEFFF8),
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Text(
-                              question.text,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                fontWeight: FontWeight.w700,
-                                fontSize: 22,
-                                height: 1.5,
-                                color: Color(0xFF2D2F2C),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Options / Gap Fill
-                    _buildQuestionWidget(question),
+
+                            const SizedBox(height: 32),
+
+                            // Options / Gap Fill
+                            _buildQuestionWidget(question),
                           ],
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Scoreboard Bento
                     _buildScoreBoard(),
                   ],
@@ -1057,7 +1346,9 @@ class _BattleScreenState extends State<BattleScreen> {
               Icon(
                 ratingDelta >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
                 size: 14,
-                color: ratingDelta >= 0 ? const Color(0xFF0D6661) : const Color(0xFFB02500),
+                color: ratingDelta >= 0
+                    ? const Color(0xFF0D6661)
+                    : const Color(0xFFB02500),
               ),
               const SizedBox(width: 2),
               Text(
@@ -1066,7 +1357,9 @@ class _BattleScreenState extends State<BattleScreen> {
                   fontFamily: 'Plus Jakarta Sans',
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
-                  color: ratingDelta >= 0 ? const Color(0xFF0D6661) : const Color(0xFFB02500),
+                  color: ratingDelta >= 0
+                      ? const Color(0xFF0D6661)
+                      : const Color(0xFFB02500),
                 ),
               ),
             ],
@@ -1109,13 +1402,16 @@ class _BattleScreenState extends State<BattleScreen> {
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFDC003), width: 4),
+                        border: Border.all(
+                          color: const Color(0xFFFDC003),
+                          width: 4,
+                        ),
                         boxShadow: const [
                           BoxShadow(
                             color: Colors.black12,
                             blurRadius: 8,
                             offset: Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: UserAvatar(
@@ -1159,9 +1455,9 @@ class _BattleScreenState extends State<BattleScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(width: 16),
-        
+
         // Opponent Card
         Expanded(
           child: Container(
@@ -1191,13 +1487,16 @@ class _BattleScreenState extends State<BattleScreen> {
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFADADA9), width: 4),
+                        border: Border.all(
+                          color: const Color(0xFFADADA9),
+                          width: 4,
+                        ),
                         boxShadow: const [
                           BoxShadow(
                             color: Colors.black12,
                             blurRadius: 8,
                             offset: Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: UserAvatar(
@@ -1265,36 +1564,47 @@ class _BattleScreenState extends State<BattleScreen> {
           physics: const NeverScrollableScrollPhysics(),
           children: question.options!.map((opt) {
             return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF1F1EC),
-                foregroundColor: const Color(0xFF2D2F2C),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Colors.transparent, width: 2),
-                ),
-              ).copyWith(
-                overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                  (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.hovered)) {
-                      return const Color(0xFFFDC003).withOpacity(0.1);
-                    }
-                    if (states.contains(MaterialState.pressed)) {
-                      return const Color(0xFFFDC003).withOpacity(0.2);
-                    }
-                    return null;
-                  },
-                ),
-                side: MaterialStateProperty.resolveWith<BorderSide?>(
-                  (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.hovered) || states.contains(MaterialState.pressed)) {
-                      return BorderSide(color: const Color(0xFFFDC003).withOpacity(0.3), width: 2);
-                    }
-                    return const BorderSide(color: Colors.transparent, width: 2);
-                  },
-                ),
-              ),
+              style:
+                  ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF1F1EC),
+                    foregroundColor: const Color(0xFF2D2F2C),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                        color: Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.resolveWith<Color?>((
+                      Set<MaterialState> states,
+                    ) {
+                      if (states.contains(MaterialState.hovered)) {
+                        return const Color(0xFFFDC003).withOpacity(0.1);
+                      }
+                      if (states.contains(MaterialState.pressed)) {
+                        return const Color(0xFFFDC003).withOpacity(0.2);
+                      }
+                      return null;
+                    }),
+                    side: MaterialStateProperty.resolveWith<BorderSide?>((
+                      Set<MaterialState> states,
+                    ) {
+                      if (states.contains(MaterialState.hovered) ||
+                          states.contains(MaterialState.pressed)) {
+                        return BorderSide(
+                          color: const Color(0xFFFDC003).withOpacity(0.3),
+                          width: 2,
+                        );
+                      }
+                      return const BorderSide(
+                        color: Colors.transparent,
+                        width: 2,
+                      );
+                    }),
+                  ),
               onPressed: () => answerQuestion(opt),
               child: FittedBox(
                 fit: BoxFit.scaleDown,

@@ -33,6 +33,12 @@ class _ProfilePageState extends State<ProfilePage>
   final _languageNotifier = ValueNotifier<String?>('german');
 
   static const int _tabCount = 4;
+  static const _background = Color(0xFFF7F7F2);
+  static const _onBackground = Color(0xFF2D2F2C);
+  static const _onSurfaceVariant = Color(0xFF5A5C58);
+  static const _surfaceContainerLow = Color(0xFFF1F1EC);
+  static const _primaryContainer = Color(0xFFFDC003);
+  static const _onPrimaryContainer = Color(0xFF553E00);
 
   @override
   void initState() {
@@ -93,62 +99,117 @@ class _ProfilePageState extends State<ProfilePage>
     final user = widget.battleService.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: user == null
-          ? const Center(child: Text('Log in to see your profile'))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ProfileHeader(
-                  user: user,
-                  battleService: widget.battleService,
-                ), // pass battleService
-                TabBar(
-                  controller: _tabController,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+      backgroundColor: _background,
+      body: SafeArea(
+        bottom: false,
+        child: user == null
+            ? const Center(child: Text('Log in to see your profile'))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
+                    child: Row(
+                      children: [
+                        _HeaderIconButton(
+                          icon: Icons.arrow_back_rounded,
+                          tooltip: 'Back',
+                          onTap: () => Navigator.pop(context),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text(
+                            'Profile',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: _onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                        _HeaderIconButton(
+                          icon: Icons.settings_outlined,
+                          tooltip: 'Settings',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SettingsPage(
+                                battleService: widget.battleService,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.normal,
-                    fontSize: 13,
+                  _ProfileHeader(user: user),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        dividerColor: Colors.transparent,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          color: _primaryContainer,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        labelColor: _onPrimaryContainer,
+                        unselectedLabelColor: _onSurfaceVariant,
+                        labelStyle: const TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                        unselectedLabelStyle: const TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                        tabs: const [
+                          Tab(text: 'Recap'),
+                          Tab(text: 'Stats'),
+                          Tab(text: 'Games'),
+                          Tab(text: 'Friends'),
+                        ],
+                      ),
+                    ),
                   ),
-                  tabs: const [
-                    Tab(text: 'Recap'),
-                    Tab(text: 'Statistics'),
-                    Tab(text: 'Games'),
-                    Tab(text: 'Friends'),
-                  ],
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      ProfileRecapTab(
-                        battleService: widget.battleService,
-                        recentGames: _recentGames,
-                        gamesLoading: _gamesLoading,
-                        onLanguageTap: (lang) {
-                          _languageNotifier.value = lang;
-                          _tabController.animateTo(1);
-                        },
-                      ),
-                      ProfileStatisticsTab(
-                        battleService: widget.battleService,
-                        languageNotifier: _languageNotifier,
-                      ),
-                      ProfileGamesTab(
-                        battleService: widget.battleService,
-                        allGames: _allGames,
-                        loading: _gamesLoading,
-                      ),
-                      ProfileFriendsTab(battleService: widget.battleService),
-                    ],
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        ProfileRecapTab(
+                          battleService: widget.battleService,
+                          recentGames: _recentGames,
+                          gamesLoading: _gamesLoading,
+                          onLanguageTap: (lang) {
+                            _languageNotifier.value = lang;
+                            _tabController.animateTo(1);
+                          },
+                        ),
+                        ProfileStatisticsTab(
+                          battleService: widget.battleService,
+                          languageNotifier: _languageNotifier,
+                        ),
+                        ProfileGamesTab(
+                          battleService: widget.battleService,
+                          allGames: _allGames,
+                          loading: _gamesLoading,
+                        ),
+                        ProfileFriendsTab(battleService: widget.battleService),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -157,14 +218,41 @@ class _ProfilePageState extends State<ProfilePage>
 // Profile header card
 // ─────────────────────────────────────────────
 
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: _ProfilePageState._surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: _ProfilePageState._onPrimaryContainer),
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileHeader extends StatelessWidget {
   final UserSession user;
-  final BattleService battleService; // add this
 
-  const _ProfileHeader({
-    required this.user,
-    required this.battleService, // add this
-  });
+  const _ProfileHeader({required this.user});
 
   String _formatLastSeen(DateTime? lastSeen) {
     if (lastSeen == null) return 'Unknown';
@@ -197,8 +285,6 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final isOnline =
         user.lastSeen != null &&
         DateTime.now().difference(user.lastSeen!).inMinutes < 5;
@@ -206,96 +292,145 @@ class _ProfileHeader extends StatelessWidget {
     final joinedText = _formatJoined(user.createdAt);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Square profile picture with initials
-          UserAvatar(
-            name: user.name,
-            base64Image: user.avatarBase64,
-            size: 72,
-            borderRadius: 12,
-          ),
-
-          const SizedBox(width: 14),
-
-          // Name + info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2D2F2C).withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  user.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                // Online / last seen
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isOnline
-                            ? Colors.green.shade500
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      lastSeenText,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isOnline
-                            ? Colors.green.shade600
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 4),
-
-                // Friends count
-                Text(
-                  '${user.friendsCount} ${user.friendsCount == 1 ? 'friend' : 'friends'}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-
-                if (joinedText.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    joinedText,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFF755700).withValues(alpha: 0.1),
+                      width: 2,
                     ),
                   ),
-                ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: UserAvatar(
+                      name: user.name,
+                      base64Image: user.avatarBase64,
+                      size: 72,
+                      borderRadius: 22,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: isOnline
+                          ? const Color(0xFF0D6661)
+                          : _ProfilePageState._onSurfaceVariant,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-
-          // Edit button
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SettingsPage(battleService: battleService),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: _ProfilePageState._onBackground,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ProfileInfoPill(
+                        icon: Icons.circle,
+                        label: lastSeenText,
+                        color: isOnline
+                            ? const Color(0xFF0D6661)
+                            : _ProfilePageState._onSurfaceVariant,
+                      ),
+                      _ProfileInfoPill(
+                        icon: Icons.group_outlined,
+                        label:
+                            '${user.friendsCount} ${user.friendsCount == 1 ? 'friend' : 'friends'}',
+                        color: _ProfilePageState._onSurfaceVariant,
+                      ),
+                      if (joinedText.isNotEmpty)
+                        _ProfileInfoPill(
+                          icon: Icons.calendar_today_outlined,
+                          label: joinedText,
+                          color: _ProfilePageState._onSurfaceVariant,
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            icon: const Icon(Icons.edit_outlined, size: 20),
-            tooltip: 'Edit profile',
-            style: IconButton.styleFrom(
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileInfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ProfileInfoPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: _ProfilePageState._surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: icon == Icons.circle ? 8 : 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              color: _ProfilePageState._onSurfaceVariant,
             ),
           ),
         ],

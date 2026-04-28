@@ -27,8 +27,8 @@ class _HomePageState extends State<HomePage> {
   String selectedMode = "classic";
 
   final List<Map<String, String>> modes = [
-    {"key": "classic", "title": "Classic", "icon": "🎯"},
-    {"key": "word_chain", "title": "Word Chain", "icon": "🔗"},
+    {"key": "classic", "title": "Classic"},
+    {"key": "word_chain", "title": "Word Chain"},
   ];
 
   static const Map<String, String> languageLabels = {
@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> {
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
         ),
       ),
       padding: const EdgeInsets.all(16),
@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
                     fontSize: 13,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onPrimaryContainer.withOpacity(0.8),
+                    ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -122,63 +122,94 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildModeSelector() {
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: modes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final mode = modes[index];
-          final isSelected = selectedMode == mode["key"];
+  IconData _iconForMode(String? key) {
+    switch (key) {
+      case "word_chain":
+        return Icons.link;
+      case "classic":
+      default:
+        return Icons.track_changes;
+    }
+  }
 
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedMode = mode["key"]!;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 140,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFFFDC003)
-                      : const Color(0xFFE0E0DC),
-                  width: isSelected ? 2 : 1,
-                ),
-                boxShadow: [
-                  if (isSelected)
-                    BoxShadow(
-                      color: const Color(0xFFFDC003).withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(mode["icon"]!, style: const TextStyle(fontSize: 24)),
-                  const SizedBox(height: 8),
-                  Text(
-                    mode["title"]!,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
+  Widget _buildModeSelector() {
+    return Row(
+      children: modes.map((mode) {
+        final modeKey = mode["key"]!;
+        final isSelected = selectedMode == modeKey;
+        final selectedColor = isSelected
+            ? const Color(0xFFFDC003)
+            : const Color(0xFFDCDDD7);
+        final foregroundColor = isSelected
+            ? const Color(0xFF553E00)
+            : const Color(0xFF5A5C58);
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: mode == modes.first ? 0 : 6,
+              right: mode == modes.last ? 0 : 6,
+            ),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  selectedMode = modeKey;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                height: 84,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFFFF4C7) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFFFDC003)
+                        : const Color(0xFFE1E1DC),
+                    width: isSelected ? 2 : 1,
                   ),
-                ],
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: selectedColor,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        _iconForMode(modeKey),
+                        color: foregroundColor,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        mode["title"]!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: isSelected
+                              ? const Color(0xFF2D2F2C)
+                              : const Color(0xFF5A5C58),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -289,310 +320,206 @@ class _HomePageState extends State<HomePage> {
               if (widget.battleService.activeRoom != null)
                 _buildActiveGameBanner(context),
 
-            // Notifications Icon (moved from App Bar since user wants Settings as is)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Langbattle",
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Color(0xFF755700),
-                  ),
-                ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsPage(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFF1F1EC,
-                          ), // surface-container-low
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.settings_outlined,
-                          color: Color(0xFF755700),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NotificationsPage(
-                              battleService: widget.battleService,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFF1F1EC,
-                          ), // surface-container-low
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(
-                              Icons.notifications_outlined,
-                              color: Color(0xFF755700),
-                            ),
-                            if (hasNotifications)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // User Profile Card
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ProfilePage(battleService: widget.battleService),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white, // surface-container-lowest
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF2D2F2C).withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: const Color(0xFF755700).withOpacity(0.1),
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: UserAvatar(
-                              name: currentUser?.name ?? '',
-                              base64Image: currentUser?.avatarBase64,
-                              size: 64,
-                              borderRadius: 22,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: -4,
-                          right: -4,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0D6661), // tertiary
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentUser?.name ?? "Guest",
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Color(0xFF2D2F2C),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Language Selector Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F1EC), // surface-container-low
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Notifications Icon (moved from App Bar since user wants Settings as is)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  const Text(
+                    "Langbattle",
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Color(0xFF755700),
+                    ),
+                  ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "TARGET LANGUAGE",
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A5C58),
-                          fontSize: 12,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      DropdownButton<String>(
-                        value: selectedLanguage,
-                        icon: const Icon(
-                          Icons.expand_more,
-                          color: Color(0xFF755700),
-                        ),
-                        elevation: 16,
-                        style: const TextStyle(
-                          color: Color(0xFF755700),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        underline: Container(height: 0),
-                        onChanged: (String? value) {
-                          if (value == null) return;
-                          setState(() {
-                            selectedLanguage = value;
-                          });
-                          SharedPreferences.getInstance().then(
-                            (prefs) => prefs.setString(
-                              Kconstants.battleLanguageKey,
-                              value,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
                             ),
                           );
                         },
-                        items: filteredLanguages.map((e) {
-                          final key = e.value;
-                          final label =
-                              {
-                                "languageEnglish": loc.languageEnglish,
-                                "languageGerman": loc.languageGerman,
-                                "languageFrench": loc.languageFrench,
-                                "languageRomanian": loc.languageRomanian,
-                              }[key] ??
-                              e.key;
-                          return DropdownMenuItem<String>(
-                            value: e.key,
-                            child: Text(
-                              label,
-                            ), // Show languages instead of "change"
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFF1F1EC,
+                            ), // surface-container-low
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.settings_outlined,
+                            color: Color(0xFF755700),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationsPage(
+                                battleService: widget.battleService,
+                              ),
+                            ),
                           );
-                        }).toList(),
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFF1F1EC,
+                            ), // surface-container-low
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(
+                                Icons.notifications_outlined,
+                                color: Color(0xFF755700),
+                              ),
+                              if (hasNotifications)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      LanguageFlag(
-                        language: selectedLanguage,
-                        width: 76,
-                        height: 54,
-                        borderRadius: 14,
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // User Profile Card
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ProfilePage(battleService: widget.battleService),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white, // surface-container-lowest
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2D2F2C).withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(width: 20),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Text(
-                            languageLabel,
-                            style: const TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontWeight: FontWeight.w800,
-                              fontSize: 24,
-                              color: Color(0xFF2D2F2C),
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF755700,
+                                ).withValues(alpha: 0.1),
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: UserAvatar(
+                                name: currentUser?.name ?? '',
+                                base64Image: currentUser?.avatarBase64,
+                                size: 64,
+                                borderRadius: 22,
+                              ),
                             ),
                           ),
-                          Text(
-                            (rating ?? 'N/A').toString() + " ELO",
-                            style: const TextStyle(
-                              color: Color(0xFF5A5C58),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                          Positioned(
+                            bottom: -4,
+                            right: -4,
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D6661), // tertiary
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentUser?.name ?? "Guest",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF2D2F2C),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // Bento Stats Grid
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xFFDCDDD7,
-                      ), // surface-container-highest
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // Language Selector Section
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EC), // surface-container-low
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          "CURRENT ELO",
+                          "TARGET LANGUAGE",
                           style: TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
                             fontWeight: FontWeight.bold,
@@ -601,157 +528,256 @@ class _HomePageState extends State<HomePage> {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          (rating ?? 1000).toString(),
+                        DropdownButton<String>(
+                          value: selectedLanguage,
+                          icon: const Icon(
+                            Icons.expand_more,
+                            color: Color(0xFF755700),
+                          ),
+                          elevation: 16,
                           style: const TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 36,
-                            color: Color(0xFF2D2F2C),
-                          ),
-                        ),
-                        const Text(
-                          "Top 5% Globally",
-                          style: TextStyle(
-                            color: Color(0xFF0D6661),
+                            color: Color(0xFF755700),
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xFFDCDDD7,
-                      ), // surface-container-highest
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "WIN STREAK",
-                          style: TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A5C58),
-                            fontSize: 12,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "12",
-                          style: TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 36,
-                            color: Color(0xFFAB2D00), // secondary
-                          ),
-                        ),
-                        const Text(
-                          "Matches won",
-                          style: TextStyle(
-                            color: Color(0xFF5A5C58),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Battle Now Hero Section
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(
-                  color: const Color(0xFF755700).withOpacity(0.05),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF755700).withOpacity(0.12),
-                    blurRadius: 40,
-                    offset: const Offset(0, 20),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  _buildModeSelector(),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFDC003),
-                      foregroundColor: const Color(0xFF553E00),
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      minimumSize: const Size(double.infinity, 64),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) {
-                            return _buildBattleScreen(
-                              language: selectedLanguage,
-                              mode: selectedMode,
+                          underline: Container(height: 0),
+                          onChanged: (String? value) {
+                            if (value == null) return;
+                            setState(() {
+                              selectedLanguage = value;
+                            });
+                            SharedPreferences.getInstance().then(
+                              (prefs) => prefs.setString(
+                                Kconstants.battleLanguageKey,
+                                value,
+                              ),
                             );
                           },
+                          items: filteredLanguages.map((e) {
+                            final key = e.value;
+                            final label =
+                                {
+                                  "languageEnglish": loc.languageEnglish,
+                                  "languageGerman": loc.languageGerman,
+                                  "languageFrench": loc.languageFrench,
+                                  "languageRomanian": loc.languageRomanian,
+                                }[key] ??
+                                e.key;
+                            return DropdownMenuItem<String>(
+                              value: e.key,
+                              child: Text(
+                                label,
+                              ), // Show languages instead of "change"
+                            );
+                          }).toList(),
                         ),
-                      );
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.sports_kabaddi, size: 28),
-                        SizedBox(width: 12),
-                        Text(
-                          "BATTLE NOW",
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        LanguageFlag(
+                          language: selectedLanguage,
+                          width: 76,
+                          height: 54,
+                          borderRadius: 14,
+                        ),
+                        const SizedBox(width: 20),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              languageLabel,
+                              style: const TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 24,
+                                color: Color(0xFF2D2F2C),
+                              ),
+                            ),
+                            Text(
+                              "${rating ?? 'N/A'} ELO",
+                              style: const TextStyle(
+                                color: Color(0xFF5A5C58),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Battle Section
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EC),
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "BATTLE",
                           style: TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                            letterSpacing: 1,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5A5C58),
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF0D6661),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "${widget.battleService.onlineCount} online",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF5A5C58),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "${widget.battleService.onlineCount} Players Online Now",
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A5C58),
-                      letterSpacing: -0.5,
+                    const SizedBox(height: 16),
+                    _buildModeSelector(),
+                    const SizedBox(height: 16),
+                    _BattleButton(
+                      label: "BATTLE NOW",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) {
+                              return _buildBattleScreen(
+                                language: selectedLanguage,
+                                mode: selectedMode,
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BattleButton extends StatefulWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _BattleButton({required this.label, required this.onPressed});
+
+  @override
+  State<_BattleButton> createState() => _BattleButtonState();
+}
+
+class _BattleButtonState extends State<_BattleButton> {
+  bool _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (_isPressed == value) return;
+    setState(() {
+      _isPressed = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const buttonHeight = 72.0;
+    const edgeHeight = 6.0;
+
+    return SizedBox(
+      width: double.infinity,
+      height: buttonHeight + edgeHeight,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: buttonHeight,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFF755700),
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            left: 0,
+            right: 0,
+            top: _isPressed ? edgeHeight - 2 : 0,
+            height: buttonHeight,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: widget.onPressed,
+                onTapDown: (_) => _setPressed(true),
+                onTapCancel: () => _setPressed(false),
+                onTapUp: (_) => _setPressed(false),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDC003),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Center(
+                    child: Text(
+                      widget.label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        letterSpacing: 0,
+                        color: Color(0xFF553E00),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

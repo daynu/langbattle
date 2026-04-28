@@ -38,6 +38,21 @@ extension TimeFilterExt on TimeFilter {
         return null;
     }
   }
+
+  String get detail {
+    switch (this) {
+      case TimeFilter.week:
+        return 'Last week';
+      case TimeFilter.month:
+        return 'Last month';
+      case TimeFilter.threeMonths:
+        return '3 months';
+      case TimeFilter.year:
+        return 'Past year';
+      case TimeFilter.allTime:
+        return 'History';
+    }
+  }
 }
 
 class RatingEntry {
@@ -197,19 +212,43 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
 
           const SizedBox(height: 20),
 
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: TimeFilter.values.map((f) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(f.label),
-                    selected: _filter == f,
-                    onSelected: (_) => setState(() => _filter = f),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F1EC),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'TIME RANGE',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A5C58),
+                    fontSize: 12,
+                    letterSpacing: 1.2,
                   ),
-                );
-              }).toList(),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: TimeFilter.values.map((filter) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: _TimeRangeOption(
+                          label: filter.label,
+                          detail: filter.detail,
+                          selected: _filter == filter,
+                          onTap: () => setState(() => _filter = filter),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -313,10 +352,72 @@ class _ProfileStatisticsTabState extends State<ProfileStatisticsTab> {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: const Color(0xFFE1E1DC)),
       ),
       child: Center(child: child),
+    );
+  }
+}
+
+class _TimeRangeOption extends StatelessWidget {
+  final String label;
+  final String detail;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TimeRangeOption({
+    required this.label,
+    required this.detail,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected
+        ? const Color(0xFF553E00)
+        : const Color(0xFF5A5C58);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        constraints: const BoxConstraints(minWidth: 86),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFDC003) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFFFDC003) : const Color(0xFFE1E1DC),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: foreground,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              detail,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 10,
+                color: foreground.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -332,25 +433,64 @@ class EloChart extends StatefulWidget {
 class _EloChartState extends State<EloChart> {
   int? _touchedIndex;
 
-  String _formatDate(DateTime date) =>
-      '${date.day}/${date.month}/${date.year.toString().substring(2)}';
+  static const List<String> _monthLabels = [
+    'jan.',
+    'feb.',
+    'mar.',
+    'apr.',
+    'may.',
+    'jun.',
+    'jul.',
+    'aug.',
+    'sep.',
+    'oct.',
+    'nov.',
+    'dec.',
+  ];
+
+  String _formatDate(DateTime date) {
+    final month = _monthLabels[date.month - 1];
+    return '${date.day} $month ${date.year}.';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final entries = widget.entries;
+    const chartLineColor = Color(0xFFFDC003);
 
-    final minY =
-        (entries.map((e) => e.rating).reduce((a, b) => a < b ? a : b) - 50)
-            .toDouble()
-            .clamp(0.0, double.infinity);
-    final maxY =
-        entries
-            .map((e) => e.rating)
-            .reduce((a, b) => a > b ? a : b)
-            .toDouble() +
-        50;
-    final interval = ((maxY - minY) / 4).clamp(1.0, double.infinity);
+    final minRating = entries
+        .map((e) => e.rating)
+        .reduce((a, b) => a < b ? a : b)
+        .toDouble();
+    final maxRating = entries
+        .map((e) => e.rating)
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble();
+    const yAxisStepCandidates = [50.0, 100.0, 250.0, 500.0, 1000.0, 2000.0];
+    var yAxisInterval = yAxisStepCandidates.last;
+    var minY = 0.0;
+    var maxY = yAxisInterval * 2;
+
+    for (final candidate in yAxisStepCandidates) {
+      final adjustedMinRating = minRating == maxRating
+          ? minRating - candidate
+          : minRating;
+      final lowerBound = (adjustedMinRating / candidate).floor() * candidate;
+      final candidateMinY = lowerBound < 0 ? 0.0 : lowerBound;
+      final candidateMaxY = candidateMinY + (candidate * 2);
+
+      if (candidateMaxY >= maxRating) {
+        yAxisInterval = candidate;
+        minY = candidateMinY;
+        maxY = candidateMaxY;
+        break;
+      }
+    }
+    final yAxisValues = [minY, minY + yAxisInterval, maxY];
+    bool shouldShowYAxisValue(double value) {
+      return yAxisValues.any((axisValue) => (axisValue - value).abs() < 0.01);
+    }
 
     final spots = entries
         .asMap()
@@ -360,10 +500,11 @@ class _EloChartState extends State<EloChart> {
 
     return Container(
       height: 260,
-      padding: const EdgeInsets.only(right: 16, top: 16, bottom: 8),
+      padding: const EdgeInsets.fromLTRB(14, 18, 18, 10),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: const Color(0xFFE1E1DC)),
       ),
       child: LineChart(
         LineChartData(
@@ -373,11 +514,10 @@ class _EloChartState extends State<EloChart> {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: interval,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: colorScheme.outlineVariant.withOpacity(0.5),
-              strokeWidth: 0.8,
-            ),
+            horizontalInterval: yAxisInterval,
+            checkToShowHorizontalLine: shouldShowYAxisValue,
+            getDrawingHorizontalLine: (_) =>
+                FlLine(color: const Color(0xFFE1E1DC), strokeWidth: 0.8),
           ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -385,20 +525,27 @@ class _EloChartState extends State<EloChart> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 44,
-                interval: interval,
-                getTitlesWidget: (value, _) => Text(
-                  value.toInt().toString(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                interval: yAxisInterval,
+                getTitlesWidget: (value, _) {
+                  if (!shouldShowYAxisValue(value)) {
+                    return const SizedBox.shrink();
+                  }
+                  return Text(
+                    value.toInt().toString(),
+                    style: const TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      color: Color(0xFF5A5C58),
+                    ),
+                  );
+                },
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 28,
+                reservedSize: 42,
                 interval: (entries.length / 4).clamp(1.0, double.infinity),
                 getTitlesWidget: (value, _) {
                   final idx = value.toInt();
@@ -409,9 +556,11 @@ class _EloChartState extends State<EloChart> {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       _formatDate(entries[idx].date),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: colorScheme.onSurfaceVariant,
+                      style: const TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 9,
+                        color: Color(0xFF5A5C58),
                       ),
                     ),
                   );
@@ -431,6 +580,14 @@ class _EloChartState extends State<EloChart> {
                 _touchedIndex = response?.lineBarSpots?.first.x.toInt();
               });
             },
+            getTouchedSpotIndicator: (barData, spotIndexes) {
+              return spotIndexes.map((_) {
+                return TouchedSpotIndicatorData(
+                  const FlLine(color: Colors.transparent, strokeWidth: 0),
+                  FlDotData(show: false),
+                );
+              }).toList();
+            },
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
                 final idx = s.x.toInt();
@@ -446,7 +603,9 @@ class _EloChartState extends State<EloChart> {
                     TextSpan(
                       text: _formatDate(entry.date),
                       style: TextStyle(
-                        color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+                        color: colorScheme.onPrimaryContainer.withValues(
+                          alpha: 0.8,
+                        ),
                         fontSize: 11,
                         fontWeight: FontWeight.normal,
                       ),
@@ -461,19 +620,17 @@ class _EloChartState extends State<EloChart> {
               spots: spots,
               isCurved: true,
               curveSmoothness: 0.3,
-              color: colorScheme.primary,
-              barWidth: 2.5,
+              color: chartLineColor,
+              barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
                 show: true,
-                checkToShowDot: (spot, _) =>
-                    spot.x.toInt() == _touchedIndex ||
-                    spot.x.toInt() == spots.length - 1,
+                checkToShowDot: (spot, _) => spot.x.toInt() == _touchedIndex,
                 getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
-                  radius: spot.x.toInt() == spots.length - 1 ? 4 : 5,
-                  color: colorScheme.primary,
+                  radius: 5,
+                  color: chartLineColor,
                   strokeWidth: 2,
-                  strokeColor: colorScheme.surface,
+                  strokeColor: Colors.white,
                 ),
               ),
               belowBarData: BarAreaData(
@@ -482,8 +639,8 @@ class _EloChartState extends State<EloChart> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    colorScheme.primary.withValues(alpha: 0.18),
-                    colorScheme.primary.withValues(alpha: 0.0),
+                    chartLineColor.withValues(alpha: 0.16),
+                    chartLineColor.withValues(alpha: 0.0),
                   ],
                 ),
               ),

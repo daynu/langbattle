@@ -38,9 +38,6 @@ class _BattleScreenState extends State<BattleScreen> {
   Timer? _timer;
   int waitSeconds = 0;
   Timer? _waitTimer;
-  int? ratingDelta;
-  int? newRating;
-  String? newLevel;
   Map<String, dynamic>? ratingUpdate;
   Map<String, String> myAnswers = {};
   String? opponentAvatar;
@@ -598,6 +595,14 @@ class _BattleScreenState extends State<BattleScreen> {
       final Color onResultColor = isDraw
           ? const Color(0xFF5A5C58)
           : (isVictory ? const Color(0xFF553E00) : const Color(0xFF520C00));
+      final int? resultRatingDelta = ratingUpdate?["delta"] as int?;
+      final Color ratingDeltaColor = resultRatingDelta == null
+          ? const Color(0x995A5C58)
+          : resultRatingDelta > 0
+          ? const Color(0xFF0D6661)
+          : resultRatingDelta < 0
+          ? const Color(0xFFB02500)
+          : const Color(0x995A5C58);
 
       return Scaffold(
         backgroundColor: const Color(0xFFFBFBF9),
@@ -693,7 +698,6 @@ class _BattleScreenState extends State<BattleScreen> {
                                   base64Image: myAvatar,
                                   score: scores["me"] ?? 0,
                                   isWinner: isVictory || isDraw,
-                                  ratingDelta: ratingUpdate?["delta"] as int?,
                                 ),
 
                                 const Text(
@@ -713,7 +717,6 @@ class _BattleScreenState extends State<BattleScreen> {
                                   base64Image: opponentAvatar,
                                   score: scores["opponent"] ?? 0,
                                   isWinner: !isVictory || isDraw,
-                                  ratingDelta: null,
                                 ),
                               ],
                             ),
@@ -747,10 +750,27 @@ class _BattleScreenState extends State<BattleScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-                                  const Icon(
-                                    Icons.arrow_forward,
-                                    color: Color(0x4D5A5C58),
-                                    size: 16,
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (resultRatingDelta != null) ...[
+                                        Text(
+                                          "${resultRatingDelta >= 0 ? '+' : ''}$resultRatingDelta",
+                                          style: TextStyle(
+                                            fontFamily: 'Plus Jakarta Sans',
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12,
+                                            color: ratingDeltaColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
+                                      Icon(
+                                        Icons.arrow_forward,
+                                        color: ratingDeltaColor,
+                                        size: 16,
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(width: 16),
                                   Text(
@@ -1082,189 +1102,209 @@ class _BattleScreenState extends State<BattleScreen> {
 
             // Main Content Area
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            // Timer & Round Header
-                            Column(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isClassicQuestion = question.type != 'gap_fill';
+                  final compactBattleLayout =
+                      isClassicQuestion && constraints.maxHeight < 620;
+
+                  final content = Column(
+                    children: [
+                      // Timer & Round Header
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: compactBattleLayout ? 68 : 96,
+                            height: compactBattleLayout ? 68 : 96,
+                            child: Stack(
+                              fit: StackFit.expand,
                               children: [
-                                SizedBox(
-                                  width: 96,
-                                  height: 96,
-                                  child: Stack(
-                                    fit: StackFit.expand,
+                                CircularProgressIndicator(
+                                  value: 1.0,
+                                  strokeWidth: compactBattleLayout ? 6 : 8,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFE2E3DD),
+                                  ),
+                                ),
+                                TweenAnimationBuilder<double>(
+                                  key: ValueKey(question.id),
+                                  tween: Tween<double>(
+                                    begin:
+                                        remainingSeconds / question.timeLimit,
+                                    end: remainingSeconds / question.timeLimit,
+                                  ),
+                                  duration: const Duration(milliseconds: 500),
+                                  builder: (context, value, child) {
+                                    return CircularProgressIndicator(
+                                      value: value,
+                                      strokeWidth:
+                                          compactBattleLayout ? 6 : 8,
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                        Color(0xFFFDC003),
+                                      ),
+                                      backgroundColor: Colors.transparent,
+                                    );
+                                  },
+                                ),
+                                Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const CircularProgressIndicator(
-                                        value: 1.0,
-                                        strokeWidth: 8,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Color(0xFFE2E3DD),
-                                            ),
-                                      ),
-                                      TweenAnimationBuilder<double>(
-                                        key: ValueKey(question.id),
-                                        tween: Tween<double>(
-                                          begin:
-                                              remainingSeconds /
-                                              question.timeLimit,
-                                          end:
-                                              remainingSeconds /
-                                              question.timeLimit,
-                                        ),
-                                        duration: const Duration(
-                                          milliseconds: 500,
-                                        ),
-                                        builder: (context, value, child) {
-                                          return CircularProgressIndicator(
-                                            value: value,
-                                            strokeWidth: 8,
-                                            valueColor:
-                                                const AlwaysStoppedAnimation<
-                                                  Color
-                                                >(Color(0xFFFDC003)),
-                                            backgroundColor: Colors.transparent,
-                                          );
-                                        },
-                                      ),
-                                      Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              "${remainingSeconds}s",
-                                              style: const TextStyle(
-                                                fontFamily: 'Plus Jakarta Sans',
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 24,
-                                                color: Color(0xFF2D2F2C),
-                                              ),
-                                            ),
-                                            const Text(
-                                              "LEFT",
-                                              style: TextStyle(
-                                                fontFamily: 'Plus Jakarta Sans',
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 10,
-                                                color: Color(0xFF767773),
-                                              ),
-                                            ),
-                                          ],
+                                      Text(
+                                        "${remainingSeconds}s",
+                                        style: TextStyle(
+                                          fontFamily: 'Plus Jakarta Sans',
+                                          fontWeight: FontWeight.w800,
+                                          fontSize:
+                                              compactBattleLayout ? 18 : 24,
+                                          color: const Color(0xFF2D2F2C),
                                         ),
                                       ),
+                                      if (!compactBattleLayout)
+                                        const Text(
+                                          "LEFT",
+                                          style: TextStyle(
+                                            fontFamily: 'Plus Jakarta Sans',
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 10,
+                                            color: Color(0xFF767773),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                Container(
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: compactBattleLayout ? 10 : 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E3DD),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              "BATTLE ROUND ${currentIndex + 1}",
+                              style: const TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                letterSpacing: 2.0,
+                                color: Color(0xFF5A5C58),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: compactBattleLayout ? 16 : 32),
+
+                      // Question Card
+                      if (isClassicQuestion) ...[
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF2D2F2C,
+                                ).withOpacity(0.04),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.topCenter,
+                            children: [
+                              Positioned(
+                                top: -12,
+                                child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE2E3DD),
+                                    color: const Color(0xFF0D6661),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
-                                  child: Text(
-                                    "BATTLE ROUND ${currentIndex + 1}",
-                                    style: const TextStyle(
+                                  child: const Text(
+                                    "CHOOSE ANSWER",
+                                    style: TextStyle(
                                       fontFamily: 'Plus Jakarta Sans',
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                      letterSpacing: 2.0,
-                                      color: Color(0xFF5A5C58),
+                                      fontSize: 10,
+                                      color: Color(0xFFBEFFF8),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 32),
-
-                            // Question Card
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF2D2F2C,
-                                    ).withOpacity(0.04),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
                               ),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.topCenter,
-                                children: [
-                                  Positioned(
-                                    top: -12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF0D6661),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        question.type == 'gap_fill'
-                                            ? "FILL THE GAP"
-                                            : "CHOOSE ANSWER",
-                                        style: const TextStyle(
-                                          fontFamily: 'Plus Jakarta Sans',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 10,
-                                          color: Color(0xFFBEFFF8),
-                                        ),
-                                      ),
-                                    ),
+                              Padding(
+                                padding: EdgeInsets.all(
+                                  compactBattleLayout ? 20 : 32,
+                                ),
+                                child: Text(
+                                  question.text,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: compactBattleLayout ? 18 : 22,
+                                    height: compactBattleLayout ? 1.25 : 1.5,
+                                    color: const Color(0xFF2D2F2C),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(32.0),
-                                    child: Text(
-                                      question.text,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontFamily: 'Plus Jakarta Sans',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 22,
-                                        height: 1.5,
-                                        color: Color(0xFF2D2F2C),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-
-                            const SizedBox(height: 32),
-
-                            // Options / Gap Fill
-                            _buildQuestionWidget(question),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                        SizedBox(height: compactBattleLayout ? 14 : 32),
+                      ],
+
+                      // Options / Gap Fill
+                      if (isClassicQuestion)
+                        Expanded(
+                          child: _buildQuestionWidget(
+                            question,
+                            compact: compactBattleLayout,
+                            fillAvailable: true,
+                          ),
+                        )
+                      else
+                        _buildQuestionWidget(question),
+                    ],
+                  );
+
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      compactBattleLayout ? 16 : 24,
+                      compactBattleLayout ? 16 : 32,
+                      compactBattleLayout ? 16 : 24,
+                      compactBattleLayout ? 12 : 24,
                     ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: isClassicQuestion
+                              ? content
+                              : SingleChildScrollView(child: content),
+                        ),
+                        SizedBox(height: compactBattleLayout ? 8 : 16),
 
-                    const SizedBox(height: 16),
-
-                    // Scoreboard Bento
-                    _buildScoreBoard(),
-                  ],
-                ),
+                        // Scoreboard Bento
+                        _buildScoreBoard(compact: compactBattleLayout),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -1278,7 +1318,6 @@ class _BattleScreenState extends State<BattleScreen> {
     required String? base64Image,
     required int score,
     required bool isWinner,
-    required int? ratingDelta,
   }) {
     final child = Column(
       children: [
@@ -1339,45 +1378,26 @@ class _BattleScreenState extends State<BattleScreen> {
             color: isWinner ? const Color(0xFF2D2F2C) : const Color(0xFF5A5C58),
           ),
         ),
-        if (ratingDelta != null)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                ratingDelta >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 14,
-                color: ratingDelta >= 0
-                    ? const Color(0xFF0D6661)
-                    : const Color(0xFFB02500),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                "${ratingDelta >= 0 ? '+' : ''}$ratingDelta",
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  color: ratingDelta >= 0
-                      ? const Color(0xFF0D6661)
-                      : const Color(0xFFB02500),
-                ),
-              ),
-            ],
-          ),
       ],
     );
 
     return isWinner ? child : Opacity(opacity: 0.6, child: child);
   }
 
-  Widget _buildScoreBoard() {
+  Widget _buildScoreBoard({bool compact = false}) {
+    final avatarSize = compact ? 36.0 : 48.0;
+    final cardPadding = compact ? 10.0 : 16.0;
+    final avatarBorderWidth = compact ? 3.0 : 4.0;
+    final nameFontSize = compact ? 13.0 : 16.0;
+    final scoreFontSize = compact ? 20.0 : 24.0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         // User Card
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
               color: const Color(0xFFE2E3DD), // surface-container-high
               borderRadius: BorderRadius.circular(16),
@@ -1404,7 +1424,7 @@ class _BattleScreenState extends State<BattleScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: const Color(0xFFFDC003),
-                          width: 4,
+                          width: avatarBorderWidth,
                         ),
                         boxShadow: const [
                           BoxShadow(
@@ -1417,33 +1437,33 @@ class _BattleScreenState extends State<BattleScreen> {
                       child: UserAvatar(
                         name: myName ?? "Me",
                         base64Image: myAvatar,
-                        size: 48,
+                        size: avatarSize,
                         borderRadius: 8,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: compact ? 10 : 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             widget.battleService.currentUser?.name ?? "Me",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Plus Jakarta Sans',
                               fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: Color(0xFF2D2F2C),
+                              fontSize: nameFontSize,
+                              color: const Color(0xFF2D2F2C),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             "${scores["me"] ?? 0}",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Plus Jakarta Sans',
                               fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              color: Color(0xFF2D2F2C),
+                              fontSize: scoreFontSize,
+                              color: const Color(0xFF2D2F2C),
                             ),
                           ),
                         ],
@@ -1456,12 +1476,12 @@ class _BattleScreenState extends State<BattleScreen> {
           ),
         ),
 
-        const SizedBox(width: 16),
+        SizedBox(width: compact ? 10 : 16),
 
         // Opponent Card
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
               color: const Color(0xFFE8E9E3), // surface-container
               borderRadius: BorderRadius.circular(16),
@@ -1489,7 +1509,7 @@ class _BattleScreenState extends State<BattleScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: const Color(0xFFADADA9),
-                          width: 4,
+                          width: avatarBorderWidth,
                         ),
                         boxShadow: const [
                           BoxShadow(
@@ -1502,33 +1522,33 @@ class _BattleScreenState extends State<BattleScreen> {
                       child: UserAvatar(
                         name: opponentName ?? "Opponent",
                         base64Image: opponentAvatar,
-                        size: 48,
+                        size: avatarSize,
                         borderRadius: 8,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: compact ? 10 : 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
                             opponentName ?? "Opponent",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Plus Jakarta Sans',
                               fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: Color(0xFF2D2F2C),
+                              fontSize: nameFontSize,
+                              color: const Color(0xFF2D2F2C),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             "${scores["opponent"] ?? 0}",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Plus Jakarta Sans',
                               fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              color: Color(0xFF2D2F2C),
+                              fontSize: scoreFontSize,
+                              color: const Color(0xFF2D2F2C),
                             ),
                           ),
                         ],
@@ -1544,7 +1564,11 @@ class _BattleScreenState extends State<BattleScreen> {
     );
   }
 
-  Widget _buildQuestionWidget(Question question) {
+  Widget _buildQuestionWidget(
+    Question question, {
+    bool compact = false,
+    bool fillAvailable = false,
+  }) {
     switch (question.type) {
       case "gap_fill":
         return GapFillWidget(
@@ -1555,71 +1579,98 @@ class _BattleScreenState extends State<BattleScreen> {
 
       case "multiple_choice":
       default:
-        return GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 2.2,
-          physics: const NeverScrollableScrollPhysics(),
-          children: question.options!.map((opt) {
-            return ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F1EC),
-                    foregroundColor: const Color(0xFF2D2F2C),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                        color: Colors.transparent,
-                        width: 2,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final options = question.options ?? [];
+            final crossAxisSpacing = compact ? 10.0 : 16.0;
+            final mainAxisSpacing = compact ? 10.0 : 16.0;
+            final rowCount = (options.length / 2).ceil().clamp(1, 4).toInt();
+            final availableHeight = fillAvailable && constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : double.infinity;
+            final fittedItemExtent = availableHeight.isFinite
+                ? (availableHeight - (mainAxisSpacing * (rowCount - 1))) /
+                      rowCount
+                : (compact ? 60.0 : 76.0);
+            final itemExtent = fittedItemExtent
+                .clamp(48.0, compact ? 68.0 : 84.0)
+                .toDouble();
+
+            return GridView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: !fillAvailable,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: mainAxisSpacing,
+                crossAxisSpacing: crossAxisSpacing,
+                mainAxisExtent: itemExtent,
+              ),
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: options.length,
+              itemBuilder: (context, index) {
+                final opt = options[index];
+                return ElevatedButton(
+                  style:
+                      ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F1EC),
+                        foregroundColor: const Color(0xFF2D2F2C),
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 6 : 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                            color: Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ).copyWith(
+                        overlayColor:
+                            MaterialStateProperty.resolveWith<Color?>((
+                              Set<MaterialState> states,
+                            ) {
+                              if (states.contains(MaterialState.hovered)) {
+                                return const Color(0xFFFDC003).withOpacity(0.1);
+                              }
+                              if (states.contains(MaterialState.pressed)) {
+                                return const Color(0xFFFDC003).withOpacity(0.2);
+                              }
+                              return null;
+                            }),
+                        side: MaterialStateProperty.resolveWith<BorderSide?>((
+                          Set<MaterialState> states,
+                        ) {
+                          if (states.contains(MaterialState.hovered) ||
+                              states.contains(MaterialState.pressed)) {
+                            return BorderSide(
+                              color: const Color(0xFFFDC003).withOpacity(0.3),
+                              width: 2,
+                            );
+                          }
+                          return const BorderSide(
+                            color: Colors.transparent,
+                            width: 2,
+                          );
+                        }),
+                      ),
+                  onPressed: () => answerQuestion(opt),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      opt,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w800,
+                        fontSize: compact ? 15 : 18,
                       ),
                     ),
-                  ).copyWith(
-                    overlayColor: MaterialStateProperty.resolveWith<Color?>((
-                      Set<MaterialState> states,
-                    ) {
-                      if (states.contains(MaterialState.hovered)) {
-                        return const Color(0xFFFDC003).withOpacity(0.1);
-                      }
-                      if (states.contains(MaterialState.pressed)) {
-                        return const Color(0xFFFDC003).withOpacity(0.2);
-                      }
-                      return null;
-                    }),
-                    side: MaterialStateProperty.resolveWith<BorderSide?>((
-                      Set<MaterialState> states,
-                    ) {
-                      if (states.contains(MaterialState.hovered) ||
-                          states.contains(MaterialState.pressed)) {
-                        return BorderSide(
-                          color: const Color(0xFFFDC003).withOpacity(0.3),
-                          width: 2,
-                        );
-                      }
-                      return const BorderSide(
-                        color: Colors.transparent,
-                        width: 2,
-                      );
-                    }),
                   ),
-              onPressed: () => answerQuestion(opt),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  opt,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
+                );
+              },
             );
-          }).toList(),
+          },
         );
     }
   }

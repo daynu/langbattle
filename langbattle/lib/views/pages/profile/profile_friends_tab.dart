@@ -34,16 +34,13 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                event['message']?.toString() ?? 'Something went wrong'),
+              event['message']?.toString() ?? 'Something went wrong',
+            ),
           ),
         );
       }
     });
     widget.battleService.requestFriendsList();
-    for (var friend in widget.battleService.friends) {
-      print("Friend: ${friend.name}, Avatar: ${friend.avatarBase64 != null ? 'Yes' : 'No'}");
-    }
-
   }
 
   @override
@@ -70,19 +67,36 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
     final isSearching = _searchController.text.trim().isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
       child: Column(
         children: [
           TextField(
             controller: _searchController,
-            decoration: const InputDecoration(
-              labelText: 'Search players by name',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: 'Search players by name',
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF5A5C58)),
+              filled: true,
+              fillColor: const Color(0xFFF1F1EC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: const BorderSide(color: Color(0xFFFDC003)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 18,
+              ),
             ),
             onChanged: _onSearchChanged,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
             child: isSearching
                 ? _buildSearchResults(searchResults, friends)
@@ -94,37 +108,54 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
   }
 
   Widget _buildSearchResults(
-      List<PlayerSearchResult> results, List<FriendInfo> friends) {
+    List<PlayerSearchResult> results,
+    List<FriendInfo> friends,
+  ) {
     if (results.isEmpty) {
       return const Center(
-          child: Text('No players found.', textAlign: TextAlign.center));
+        child: Text('No players found.', textAlign: TextAlign.center),
+      );
     }
     return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 96),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final player = results[index];
-        final isAlreadyFriend = player.isSelf ||
+        final isAlreadyFriend =
+            player.isSelf ||
             friends.any((f) => f.userId == player.userId) ||
             player.isFriend;
-        return ListTile(
-          leading: UserAvatar(
-  name: player.name, // or friend.name
-  base64Image: null, // FriendInfo doesn't carry avatarBase64 yet
-  size: 40,
-  borderRadius: 8,
-),
-          title: Text(player.name),
-          subtitle: Text('Rating: ${player.rating}'),
+        return _FriendRow(
+          avatar: UserAvatar(
+            name: player.name,
+            base64Image: null,
+            size: 40,
+            borderRadius: 12,
+          ),
+          name: player.name,
+          subtitle: 'Rating: ${player.rating}',
           trailing: player.isSelf
-              ? const Text('You', style: TextStyle(color: Colors.grey))
+              ? const Text(
+                  'You',
+                  style: TextStyle(
+                    color: Color(0xFF5A5C58),
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
               : isAlreadyFriend
-                  ? const Icon(Icons.check, color: Colors.green)
-                  : TextButton(
-                      onPressed: () =>
-                          widget.battleService.addFriendById(player.userId),
-                      child: const Text('Add'),
-                    ),
+              ? const Icon(Icons.check, color: Color(0xFF0D6661))
+              : TextButton(
+                  onPressed: () =>
+                      widget.battleService.addFriendById(player.userId),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF553E00),
+                  ),
+                  child: const Text(
+                    'Add',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
         );
       },
     );
@@ -140,26 +171,88 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
       );
     }
     return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 96),
       itemCount: friends.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final friend = friends[index];
-        return ListTile(
-          leading: UserAvatar(
-  name: friend.name,
-  base64Image: friend.avatarBase64,
-  size: 40,
-  borderRadius: 8,
-),
-          title: Text(friend.name),
-          subtitle: Text('Rating: ${friend.rating}'),
+        return _FriendRow(
+          avatar: UserAvatar(
+            name: friend.name,
+            base64Image: friend.avatarBase64,
+            size: 40,
+            borderRadius: 12,
+          ),
+          name: friend.name,
+          subtitle: 'Rating: ${friend.rating}',
           trailing: IconButton(
-            icon: const Icon(Icons.remove_circle, color: Colors.red),
-            onPressed: () =>
-                widget.battleService.removeFriend(friend.userId),
+            icon: const Icon(
+              Icons.remove_circle_outline,
+              color: Color(0xFFAB2D00),
+            ),
+            onPressed: () => widget.battleService.removeFriend(friend.userId),
           ),
         );
       },
+    );
+  }
+}
+
+class _FriendRow extends StatelessWidget {
+  final Widget avatar;
+  final String name;
+  final String subtitle;
+  final Widget trailing;
+
+  const _FriendRow({
+    required this.avatar,
+    required this.name,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE1E1DC)),
+      ),
+      child: Row(
+        children: [
+          avatar,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: Color(0xFF2D2F2C),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Color(0xFF5A5C58),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          trailing,
+        ],
+      ),
     );
   }
 }

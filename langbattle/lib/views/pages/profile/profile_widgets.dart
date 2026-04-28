@@ -33,10 +33,15 @@ class GameTileCompact extends StatelessWidget {
       resultLabel = 'Loss';
     }
 
-    final deltaColor = delta >= 0 ? Colors.green.shade600 : colorScheme.error;
+    final deltaColor = delta >= 0 ? const Color(0xFF0D6661) : colorScheme.error;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F2),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         children: [
           LanguageFlag(
@@ -46,22 +51,29 @@ class GameTileCompact extends StatelessWidget {
             borderRadius: 8,
           ),
           const SizedBox(width: 12),
+          UserAvatar(
+            name: opp.name,
+            base64Image: opp.avatarBase64,
+            size: 40,
+            borderRadius: 12,
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                UserAvatar(
-                  name: opp.name,
-                  base64Image: opp.avatarBase64,
-                  size: 32,
-                  borderRadius: 6,
-                ),
                 Text(
                   opp.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: Color(0xFF2D2F2C),
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   'Rating: ${opp.ratingBefore}',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -76,10 +88,14 @@ class GameTileCompact extends StatelessWidget {
             children: [
               Text(
                 '${me.score} - ${opp.score}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  color: Color(0xFF2D2F2C),
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
                 resultLabel,
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -117,12 +133,12 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE1E1DC)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +146,8 @@ class StatCard extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+              color: const Color(0xFF5A5C58),
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),

@@ -59,6 +59,7 @@ class _BattleScreenState extends State<BattleScreen> {
       scores["me"] = restored["myScore"] ?? 0;
       scores["opponent"] = restored["opponentScore"] ?? 0;
       opponentName = restored["opponentName"] ?? "Opponent";
+      opponentAvatar = restored["opponentAvatar"]?.toString();
       currentIndex = restored["myCurrentIndex"] ?? 0;
       opponentFinished = restored["opponentFinished"] ?? false;
       isWaitingForOpponent = false;
@@ -1124,8 +1125,8 @@ class _BattleScreenState extends State<BattleScreen> {
                                   strokeWidth: compactBattleLayout ? 6 : 8,
                                   valueColor:
                                       const AlwaysStoppedAnimation<Color>(
-                                    Color(0xFFE2E3DD),
-                                  ),
+                                        Color(0xFFE2E3DD),
+                                      ),
                                 ),
                                 TweenAnimationBuilder<double>(
                                   key: ValueKey(question.id),
@@ -1138,12 +1139,11 @@ class _BattleScreenState extends State<BattleScreen> {
                                   builder: (context, value, child) {
                                     return CircularProgressIndicator(
                                       value: value,
-                                      strokeWidth:
-                                          compactBattleLayout ? 6 : 8,
+                                      strokeWidth: compactBattleLayout ? 6 : 8,
                                       valueColor:
                                           const AlwaysStoppedAnimation<Color>(
-                                        Color(0xFFFDC003),
-                                      ),
+                                            Color(0xFFFDC003),
+                                          ),
                                       backgroundColor: Colors.transparent,
                                     );
                                   },
@@ -1157,8 +1157,9 @@ class _BattleScreenState extends State<BattleScreen> {
                                         style: TextStyle(
                                           fontFamily: 'Plus Jakarta Sans',
                                           fontWeight: FontWeight.w800,
-                                          fontSize:
-                                              compactBattleLayout ? 18 : 24,
+                                          fontSize: compactBattleLayout
+                                              ? 18
+                                              : 24,
                                           color: const Color(0xFF2D2F2C),
                                         ),
                                       ),
@@ -1585,7 +1586,8 @@ class _BattleScreenState extends State<BattleScreen> {
             final crossAxisSpacing = compact ? 10.0 : 16.0;
             final mainAxisSpacing = compact ? 10.0 : 16.0;
             final rowCount = (options.length / 2).ceil().clamp(1, 4).toInt();
-            final availableHeight = fillAvailable && constraints.hasBoundedHeight
+            final availableHeight =
+                fillAvailable && constraints.hasBoundedHeight
                 ? constraints.maxHeight
                 : double.infinity;
             final fittedItemExtent = availableHeight.isFinite
@@ -1626,18 +1628,17 @@ class _BattleScreenState extends State<BattleScreen> {
                           ),
                         ),
                       ).copyWith(
-                        overlayColor:
-                            MaterialStateProperty.resolveWith<Color?>((
-                              Set<MaterialState> states,
-                            ) {
-                              if (states.contains(MaterialState.hovered)) {
-                                return const Color(0xFFFDC003).withOpacity(0.1);
-                              }
-                              if (states.contains(MaterialState.pressed)) {
-                                return const Color(0xFFFDC003).withOpacity(0.2);
-                              }
-                              return null;
-                            }),
+                        overlayColor: MaterialStateProperty.resolveWith<Color?>(
+                          (Set<MaterialState> states) {
+                            if (states.contains(MaterialState.hovered)) {
+                              return const Color(0xFFFDC003).withOpacity(0.1);
+                            }
+                            if (states.contains(MaterialState.pressed)) {
+                              return const Color(0xFFFDC003).withOpacity(0.2);
+                            }
+                            return null;
+                          },
+                        ),
                         side: MaterialStateProperty.resolveWith<BorderSide?>((
                           Set<MaterialState> states,
                         ) {

@@ -285,9 +285,6 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOnline =
-        user.lastSeen != null &&
-        DateTime.now().difference(user.lastSeen!).inMinutes < 5;
     final lastSeenText = _formatLastSeen(user.lastSeen);
     final joinedText = _formatJoined(user.createdAt);
 
@@ -308,45 +305,25 @@ class _ProfileHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: const Color(0xFF755700).withValues(alpha: 0.1),
-                      width: 2,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: UserAvatar(
-                      name: user.name,
-                      base64Image: user.avatarBase64,
-                      size: 72,
-                      borderRadius: 22,
-                    ),
-                  ),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFF755700).withValues(alpha: 0.1),
+                  width: 2,
                 ),
-                Positioned(
-                  bottom: -4,
-                  right: -4,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: isOnline
-                          ? const Color(0xFF0D6661)
-                          : _ProfilePageState._onSurfaceVariant,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                  ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: UserAvatar(
+                  name: user.name,
+                  base64Image: user.avatarBase64,
+                  size: 72,
+                  borderRadius: 22,
                 ),
-              ],
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -370,11 +347,9 @@ class _ProfileHeader extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _ProfileInfoPill(
-                        icon: Icons.circle,
+                        icon: Icons.access_time_rounded,
                         label: lastSeenText,
-                        color: isOnline
-                            ? const Color(0xFF0D6661)
-                            : _ProfilePageState._onSurfaceVariant,
+                        color: _ProfilePageState._onSurfaceVariant,
                       ),
                       _ProfileInfoPill(
                         icon: Icons.group_outlined,

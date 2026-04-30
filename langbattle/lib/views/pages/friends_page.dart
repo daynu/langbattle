@@ -2,14 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:langbattle/services/web-socket.dart';
+import 'package:langbattle/widgets/player_profile_modal.dart';
 
 class FriendsPage extends StatefulWidget {
   final BattleService battleService;
 
-  const FriendsPage({
-    super.key,
-    required this.battleService,
-  });
+  const FriendsPage({super.key, required this.battleService});
 
   @override
   State<FriendsPage> createState() => _FriendsPageState();
@@ -28,19 +26,21 @@ class _FriendsPageState extends State<FriendsPage> {
     _sub = widget.battleService.stream.listen((event) {
       final type = event["type"];
       if (!mounted) return;
-      if (type == "friends_list" || type == "friend_added" || type == "search_players_result") {
+      if (type == "friends_list" ||
+          type == "friend_added" ||
+          type == "search_players_result") {
         setState(() {});
       }
       if (type == "error") {
         final message = event["message"]?.toString() ?? "Something went wrong";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
       if (type == "friend_removed") {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Friend removed")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Friend removed")));
         widget.battleService.requestFriendsList();
       }
     });
@@ -72,9 +72,7 @@ class _FriendsPageState extends State<FriendsPage> {
     final isSearching = _searchController.text.trim().isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Friends'),
-      ),
+      appBar: AppBar(title: const Text('Friends')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -123,26 +121,30 @@ class _FriendsPageState extends State<FriendsPage> {
         final player = results[index];
         final isSelf = player.isSelf;
         final isAlreadyFriend =
-            isSelf || friends.any((f) => f.userId == player.userId) || player.isFriend;
+            isSelf ||
+            friends.any((f) => f.userId == player.userId) ||
+            player.isFriend;
 
         return ListTile(
-          leading: const CircleAvatar(
-            child: Icon(Icons.person),
-          ),
+          onTap: isSelf
+              ? null
+              : () => showPlayerProfileModal(
+                  context: context,
+                  battleService: widget.battleService,
+                  userId: player.userId,
+                ),
+          leading: const CircleAvatar(child: Icon(Icons.person)),
           title: Text(player.name),
           subtitle: Text('Rating: ${player.rating}'),
           trailing: isSelf
-              ? const Text(
-                  'You',
-                  style: TextStyle(color: Colors.grey),
-                )
+              ? const Text('You', style: TextStyle(color: Colors.grey))
               : isAlreadyFriend
-                  ? const Icon(Icons.check, color: Colors.green)
-                  : TextButton(
-                      onPressed: () =>
-                          widget.battleService.addFriendById(player.userId),
-                      child: const Text('Add'),
-                    ),
+              ? const Icon(Icons.check, color: Colors.green)
+              : TextButton(
+                  onPressed: () =>
+                      widget.battleService.addFriendById(player.userId),
+                  child: const Text('Add'),
+                ),
         );
       },
     );
@@ -164,14 +166,16 @@ class _FriendsPageState extends State<FriendsPage> {
       itemBuilder: (context, index) {
         final friend = friends[index];
         return ListTile(
-          leading: const CircleAvatar(
-            child: Icon(Icons.person),
+          onTap: () => showPlayerProfileModal(
+            context: context,
+            battleService: widget.battleService,
+            userId: friend.userId,
           ),
+          leading: const CircleAvatar(child: Icon(Icons.person)),
           title: Text(friend.name),
           trailing: IconButton(
             icon: const Icon(Icons.remove_circle, color: Colors.red),
-            onPressed: () =>
-                widget.battleService.removeFriend(friend.userId),
+            onPressed: () => widget.battleService.removeFriend(friend.userId),
           ),
           subtitle: Text('Rating: ${friend.rating}'),
         );
@@ -179,4 +183,3 @@ class _FriendsPageState extends State<FriendsPage> {
     );
   }
 }
-

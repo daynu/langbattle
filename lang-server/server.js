@@ -25,6 +25,7 @@ function getQueueKey(language, mode) {
 }
 let rooms = {};
 const userSockets = new Map();
+const pendingChallenges = new Map();
 
 function normalizeLanguage(lang) {
   const v = (lang ?? "").toString().trim().toLowerCase();
@@ -99,6 +100,16 @@ function trackSocketForUser(socket) {
 function getOnlineCount() {
   return userSockets.size;
 }
+
+function isUserOnline(userId) {
+  const key = userId?.toString();
+  return !!key && userSockets.has(key);
+}
+
+function parseWinStreak(value) {
+  return typeof value === "number" && !isNaN(value) ? value : 0;
+}
+
 function untrackSocketForUser(socket) {
   if (!socket.userId) return;
   const key = socket.userId.toString();
@@ -121,6 +132,18 @@ function emitToUser(userId, event, payload) {
       s.emit(event, payload);
     }
   }
+}
+
+function getSocketForUser(userId) {
+  const key = userId?.toString();
+  if (!key) return null;
+  const set = userSockets.get(key);
+  if (!set) return null;
+  for (const socketId of set) {
+    const s = io.sockets.sockets.get(socketId);
+    if (s) return s;
+  }
+  return null;
 }
 
 io.on("connection", (socket) => {
@@ -260,8 +283,8 @@ socket.on("join_queue", async (data = {}) => {
       roomId,
       mode,
       players: [
-        { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0 },
-        { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0 },
+        { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0, avatarBase64: p1.avatarBase64 ?? null },
+        { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0, avatarBase64: p2.avatarBase64 ?? null },
       ],
       questions: questionsPayload.questions,
       currentIndexes: {
@@ -337,6 +360,7 @@ socket.on("join_queue", async (data = {}) => {
         myScore: me?.score ?? 0,
         opponentScore: opponent?.score ?? 0,
         opponentName: opponent?.name ?? "Opponent",
+        opponentAvatar: opponent?.avatarBase64 ?? null,
         myCurrentIndex: room.currentIndexes?.[userId] ?? 0,
         opponentFinished: room.finished?.includes(opponent?.userId),
         currentWord: room.currentWord ?? room.startWord ?? null,
@@ -586,6 +610,8 @@ socket.on("join_queue", async (data = {}) => {
             userId: friend._id.toString(),
             name: friend.name,
             rating: friendRating,
+            avatarBase64: friend.avatarBase64 ?? null,
+            isOnline: isUserOnline(friend._id),
           },
           friendsCount: meFriendsCount,
         });
@@ -595,6 +621,8 @@ socket.on("join_queue", async (data = {}) => {
             userId: meId.toString(),
             name: me.name,
             rating: meRating,
+            avatarBase64: me.avatarBase64 ?? null,
+            isOnline: isUserOnline(meId),
           },
           friendsCount: friendFriendsCount,
         });
@@ -1009,7 +1037,8 @@ socket.on("join_queue", async (data = {}) => {
           name: u.name,
           rating:
             typeof u.rating === "number" && !isNaN(u.rating) ? u.rating : 1000,
-          avatarBase64: u.avatarBase64 ?? null
+          avatarBase64: u.avatarBase64 ?? null,
+          isOnline: isUserOnline(u._id),
         })),
         friendsCount: friendsDocs.length,
       });
@@ -1037,7 +1066,7 @@ socket.on("join_queue", async (data = {}) => {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      now = new Date();
+      const now = new Date();
 
       const result = await users.insertOne({
         email,
@@ -1048,12 +1077,14 @@ socket.on("join_queue", async (data = {}) => {
         friends: [],
         createdAt: now,
         lastSeen: now,
+        winStreak: 0,
       });
 
       socket.userId = result.insertedId;
       socket.userName = name;
       socket.rating = rating;
       socket.ratings = ratings;
+      socket.winStreak = 0;
 
       socket.emit("register_success", {
         userId: socket.userId,
@@ -1063,6 +1094,7 @@ socket.on("join_queue", async (data = {}) => {
         friendsCount: 0,
         createdAt: now,
         lastSeen: now,
+        winStreak: 0,
         avatarBase64: null
       });
 
@@ -1111,12 +1143,15 @@ socket.on("join_queue", async (data = {}) => {
 
     const friendsIds = Array.isArray(user.friends) ? user.friends : [];
     const friendsCount = friendsIds.length;
+    const winStreak = parseWinStreak(user.winStreak);
 
     socket.rating = baseRating;
+    socket.winStreak = winStreak;
 
+    const now = new Date();
     await users.updateOne(
       { _id: user._id },
-      { $set: { lastSeen: new Date() } }
+      { $set: { lastSeen: now } }
     );
 
     socket.emit("login_success", {
@@ -1127,7 +1162,8 @@ socket.on("join_queue", async (data = {}) => {
       ratings,
       friendsCount,
       createdAt: user.createdAt,
-      lastSeen: user.lastSeen,
+      lastSeen: now,
+      winStreak,
       avatarBase64: user.avatarBase64 ?? null
     });
   });
@@ -1164,6 +1200,172 @@ socket.on("join_queue", async (data = {}) => {
   });
 
   const { ObjectId } = require("mongodb");
+
+  socket.on("get_player_profile", async ({ userId }) => {
+    try {
+      if (!socket.userId) {
+        return socket.emit("player_profile_error", {
+          userId: userId?.toString() ?? "",
+          message: "You must be logged in to view player profiles",
+        });
+      }
+      if (!users) {
+        return socket.emit("player_profile_error", {
+          userId: userId?.toString() ?? "",
+          message: "Server is starting up, please try again in a moment.",
+        });
+      }
+
+      let playerObjectId;
+      try {
+        playerObjectId = new ObjectId(userId);
+      } catch (_) {
+        return socket.emit("player_profile_error", {
+          userId: userId?.toString() ?? "",
+          message: "Player not found",
+        });
+      }
+
+      const player = await users.findOne(
+        { _id: playerObjectId },
+        { projection: { name: 1, ratings: 1, rating: 1, createdAt: 1, avatarBase64: 1 } }
+      );
+      if (!player) {
+        return socket.emit("player_profile_error", {
+          userId: userId?.toString() ?? "",
+          message: "Player not found",
+        });
+      }
+
+      const baseRating =
+        typeof player.rating === "number" && !isNaN(player.rating)
+          ? player.rating
+          : 1000;
+      const ratings = player.ratings || {
+        english: baseRating,
+        german: baseRating,
+        french: baseRating,
+      };
+
+      const rankedEntries = Object.entries(ratings)
+        .filter(([, rating]) => typeof rating === "number" && !isNaN(rating));
+      const [bestLanguage, bestRating] = rankedEntries.length
+        ? rankedEntries.reduce((best, current) => current[1] > best[1] ? current : best)
+        : ["english", baseRating];
+
+      socket.emit("player_profile", {
+        userId: player._id.toString(),
+        name: player.name,
+        avatarBase64: player.avatarBase64 ?? null,
+        createdAt: player.createdAt,
+        bestLanguage,
+        bestRating,
+        bestRank: ratingToLevel(bestRating),
+      });
+    } catch (err) {
+      console.error("get_player_profile error", err);
+      socket.emit("player_profile_error", {
+        userId: userId?.toString() ?? "",
+        message: "Could not load player profile",
+      });
+    }
+  });
+
+  socket.on("challenge_player", ({ userId, mode, language }) => {
+    if (!socket.userId) {
+      return socket.emit("error_msg", "You must be logged in to challenge players");
+    }
+    if (!userId || userId.toString() === socket.userId.toString()) {
+      return socket.emit("error_msg", "Invalid player");
+    }
+    const normalizedMode = mode === "word_chain" ? "word_chain" : "classic";
+    const normalizedLanguage = normalizeLanguage(language);
+    const targetSocket = getSocketForUser(userId);
+    if (!targetSocket) {
+      return socket.emit("error_msg", "Player is not online");
+    }
+    const challengeId = Math.random().toString(36).substring(2, 10);
+    pendingChallenges.set(challengeId, {
+      id: challengeId,
+      fromUserId: socket.userId.toString(),
+      toUserId: userId.toString(),
+      mode: normalizedMode,
+      language: normalizedLanguage,
+      createdAt: Date.now(),
+    });
+
+    emitToUser(userId, "challenge_received", {
+      challengeId,
+      fromUserId: socket.userId.toString(),
+      fromName: socket.userName,
+      mode: normalizedMode,
+      language: normalizedLanguage,
+    });
+    socket.emit("challenge_sent", {
+      challengeId,
+      userId: userId.toString(),
+      mode: normalizedMode,
+      language: normalizedLanguage,
+    });
+  });
+
+  socket.on("respond_challenge", async ({ challengeId, accept }) => {
+    try {
+      if (!socket.userId) {
+        return socket.emit("error_msg", "You must be logged in to respond to challenges");
+      }
+      const challenge = pendingChallenges.get(challengeId);
+      if (!challenge || challenge.toUserId !== socket.userId.toString()) {
+        return socket.emit("error_msg", "Challenge is no longer available");
+      }
+      pendingChallenges.delete(challengeId);
+
+      const challenger = getSocketForUser(challenge.fromUserId);
+      if (!challenger) {
+        socket.emit("challenge_expired", { challengeId });
+        return socket.emit("error_msg", "The challenger is no longer online");
+      }
+
+      if (!accept) {
+        challenger.emit("challenge_declined", {
+          challengeId,
+          userId: socket.userId.toString(),
+          name: socket.userName,
+        });
+        return socket.emit("challenge_declined", { challengeId });
+      }
+
+      await startChallengeMatch(challenger, socket, challenge.language, challenge.mode);
+    } catch (err) {
+      console.error("respond_challenge error", err);
+      socket.emit("error_msg", "Could not respond to challenge");
+    }
+  });
+
+  socket.on("report_player", async ({ userId, reason }) => {
+    try {
+      if (!socket.userId) {
+        return socket.emit("error_msg", "You must be logged in to report players");
+      }
+      if (!db) {
+        return socket.emit("error_msg", "Server is starting up, please try again in a moment.");
+      }
+      if (!userId || userId.toString() === socket.userId.toString()) {
+        return socket.emit("error_msg", "Invalid player");
+      }
+
+      await db.collection("player_reports").insertOne({
+        reporterId: socket.userId,
+        reportedUserId: userId.toString(),
+        reason: (reason ?? "").toString().trim(),
+        createdAt: new Date(),
+      });
+      socket.emit("player_reported", { userId: userId.toString() });
+    } catch (err) {
+      console.error("report_player error", err);
+      socket.emit("error_msg", "Could not report player");
+    }
+  });
 
   socket.on("auth", async ({ token }) => {
     try {
@@ -1202,6 +1404,14 @@ socket.on("join_queue", async (data = {}) => {
 
       const friendsIds = Array.isArray(user.friends) ? user.friends : [];
       const friendsCount = friendsIds.length;
+      const winStreak = parseWinStreak(user.winStreak);
+      const now = new Date();
+      socket.winStreak = winStreak;
+
+      await users.updateOne(
+        { _id: user._id },
+        { $set: { lastSeen: now } }
+      );
 
       console.log("Auth OK for", user.name);
       console.log(getOnlineCount(), "users online");
@@ -1213,7 +1423,8 @@ socket.on("join_queue", async (data = {}) => {
         ratings,
         friendsCount,
         createdAt: user.createdAt,
-        lastSeen: user.lastSeen,
+        lastSeen: now,
+        winStreak,
         avatarBase64: user.avatarBase64 ?? null,
         onlineCount: getOnlineCount(),
       });
@@ -1238,20 +1449,48 @@ async function resolveRoom(roomId) {
   const s1 = room.scores[p1.id] ?? 0;
   const s2 = room.scores[p2.id] ?? 0;
   const scoreA = s1 > s2 ? 1 : s1 === s2 ? 0.5 : 0;
+  const p1Won = s1 > s2;
+  const p2Won = s2 > s1;
   const { newA, newB } = calculateElo(r1, r2, scoreA);
+  let p1WinStreak = parseWinStreak(p1.winStreak);
+  let p2WinStreak = parseWinStreak(p2.winStreak);
 
   if (users && p1.userId && p2.userId) {
     try {
       const now = new Date();
-
-      await users.updateOne({ _id: p1.userId }, {
+      const p1Update = {
         $set: { [`ratings.${langKey}`]: newA },
         $push: { ratingHistory: { rating: newA, language: langKey, date: now } }
-      });
-      await users.updateOne({ _id: p2.userId }, {
+      };
+      const p2Update = {
         $set: { [`ratings.${langKey}`]: newB },
         $push: { ratingHistory: { rating: newB, language: langKey, date: now } }
-      });
+      };
+
+      if (p1Won) {
+        p1Update.$inc = { winStreak: 1 };
+      } else {
+        p1Update.$set.winStreak = 0;
+      }
+
+      if (p2Won) {
+        p2Update.$inc = { winStreak: 1 };
+      } else {
+        p2Update.$set.winStreak = 0;
+      }
+
+      await users.updateOne({ _id: p1.userId }, p1Update);
+      await users.updateOne({ _id: p2.userId }, p2Update);
+
+      const updatedUsers = await users
+        .find({ _id: { $in: [p1.userId, p2.userId] } })
+        .project({ winStreak: 1 })
+        .toArray();
+      const updatedStreaks = new Map(
+        updatedUsers.map((user) => [user._id.toString(), parseWinStreak(user.winStreak)])
+      );
+      p1WinStreak = updatedStreaks.get(p1.userId.toString()) ?? (p1Won ? p1WinStreak + 1 : 0);
+      p2WinStreak = updatedStreaks.get(p2.userId.toString()) ?? (p2Won ? p2WinStreak + 1 : 0);
 
       await db.collection("games").insertOne({
         players: [
@@ -1270,12 +1509,142 @@ async function resolveRoom(roomId) {
 
   if (p1.ratings) p1.ratings[langKey] = newA;
   if (p2.ratings) p2.ratings[langKey] = newB;
+  p1.winStreak = p1WinStreak;
+  p2.winStreak = p2WinStreak;
 
-  p1.emit("rating_updated", { language: langKey, oldRating: r1, newRating: newA, delta: newA - r1, newLevel: ratingToLevel(newA) });
-  p2.emit("rating_updated", { language: langKey, oldRating: r2, newRating: newB, delta: newB - r2, newLevel: ratingToLevel(newB) });
+  p1.emit("rating_updated", { language: langKey, oldRating: r1, newRating: newA, delta: newA - r1, newLevel: ratingToLevel(newA), winStreak: p1WinStreak });
+  p2.emit("rating_updated", { language: langKey, oldRating: r2, newRating: newB, delta: newB - r2, newLevel: ratingToLevel(newB), winStreak: p2WinStreak });
 
   console.log(`ELO updated: ${p1.userName} ${r1}→${newA}  ${p2.userName} ${r2}→${newB}`);
   delete rooms[roomId];
+}
+
+async function startChallengeMatch(p1, p2, language, mode) {
+  const alreadyInRoom = Object.values(rooms)
+    .some(room => room.players?.some(p =>
+      p.userId?.toString() === p1.userId?.toString() ||
+      p.userId?.toString() === p2.userId?.toString()
+    ));
+
+  if (alreadyInRoom) {
+    p1.emit("error_msg", "One of the players is already in a game");
+    p2.emit("error_msg", "One of the players is already in a game");
+    return;
+  }
+
+  for (const key of Object.keys(queues)) {
+    queues[key] = queues[key].filter((s) => s !== p1 && s !== p2);
+  }
+
+  const roomId = Math.random().toString(36).substring(2, 8);
+  p1.join(roomId);
+  p2.join(roomId);
+
+  let questionsPayload = { questions: [], language, level: "A1", mode };
+
+  try {
+    const langKey = language.toLowerCase();
+    const r1 = (p1.ratings && p1.ratings[langKey]) || 1000;
+    const r2 = (p2.ratings && p2.ratings[langKey]) || 1000;
+    const avgRating = Math.round((r1 + r2) / 2);
+    const level = ratingToLevel(avgRating);
+
+    if (mode === "word_chain") {
+      const startWord = await getStartWord(language);
+      const endsAt = new Date(Date.now() + WORD_CHAIN_DURATION_SECONDS * 1000);
+      questionsPayload = {
+        questions: [],
+        language,
+        level,
+        mode,
+        startWord,
+        usedWords: [startWord],
+        durationSeconds: WORD_CHAIN_DURATION_SECONDS,
+        endsAt: endsAt.toISOString(),
+      };
+    } else {
+      const result = await getRandomQuestions(language, level, 4);
+      const normalized = (result.questions || []).map((q) => {
+        const options = Array.isArray(q.options) ? q.options : [];
+        const correctAnswers = Array.isArray(q.correctAnswers)
+          ? q.correctAnswers
+          : [q.correctAnswer ?? (q.correctIndex != null ? options[q.correctIndex] : options[0]) ?? ''];
+
+        return {
+          id: (q._id || q.id || q).toString(),
+          text: q.text || "Unknown question",
+          type: q.type || "multiple_choice",
+          timeLimit: q.timeLimit ?? 15,
+          options,
+          correctAnswers,
+          explanation: q.explanation || "",
+        };
+      });
+      questionsPayload = {
+        questions: normalized.length > 0 ? normalized : getFallbackQuestions(language),
+        language: result.language,
+        level: result.level,
+        mode,
+      };
+    }
+  } catch (err) {
+    console.error("Failed to fetch challenge questions:", err);
+    if (mode !== "word_chain") {
+      questionsPayload.questions = getFallbackQuestions(language);
+    }
+  }
+
+  rooms[roomId] = {
+    players: [p1, p2],
+    language,
+    mode,
+    scores: { [p1.id]: 0, [p2.id]: 0 },
+    finished: new Set(),
+    questions: mode === "classic"
+      ? Object.fromEntries(
+          questionsPayload.questions.map(q => [q.id, q.correctAnswers || []])
+        )
+      : {},
+    ...(mode === "word_chain" && {
+      currentWord: questionsPayload.startWord,
+      usedWords: new Set([questionsPayload.startWord]),
+      endsAt: new Date(questionsPayload.endsAt),
+    }),
+  };
+
+  await db.collection("active_rooms").insertOne({
+    roomId,
+    mode,
+    players: [
+      { userId: p1.userId.toString(), socketId: p1.id, name: p1.userName, score: 0, avatarBase64: p1.avatarBase64 ?? null },
+      { userId: p2.userId.toString(), socketId: p2.id, name: p2.userName, score: 0, avatarBase64: p2.avatarBase64 ?? null },
+    ],
+    questions: questionsPayload.questions,
+    currentIndexes: {
+      [p1.userId.toString()]: 0,
+      [p2.userId.toString()]: 0,
+    },
+    finished: [],
+    language,
+    startWord: questionsPayload.startWord ?? null,
+    currentWord: questionsPayload.startWord ?? null,
+    usedWords: questionsPayload.usedWords ?? [],
+    durationSeconds: questionsPayload.durationSeconds ?? null,
+    endsAt: questionsPayload.endsAt ? new Date(questionsPayload.endsAt) : null,
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+
+  io.to(roomId).emit("match_found", {
+    roomId,
+    mode,
+    challenge: true,
+    players: [
+      { id: p1.id, userId: p1.userId?.toString(), name: p1.userName, avatarBase64: p1.avatarBase64 ?? null },
+      { id: p2.id, userId: p2.userId?.toString(), name: p2.userName, avatarBase64: p2.avatarBase64 ?? null },
+    ],
+    ...questionsPayload,
+  });
 }
 
 
@@ -1329,7 +1698,8 @@ async function connectDB() {
                 items: { bsonType: "objectId" },
               },
               createdAt: { bsonType: "date" },
-              lastSeen: { bsonType: "date" }
+              lastSeen: { bsonType: "date" },
+              winStreak: { bsonType: "int", minimum: 0 }
             }
           }
         }

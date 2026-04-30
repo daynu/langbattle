@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> {
   String selectedLanguage = "english";
   StreamSubscription<Map<String, dynamic>>? _sub;
   String selectedMode = "classic";
+  bool _openingChallengeMatch = false;
 
   final List<Map<String, String>> modes = [
     {"key": "classic", "title": "Classic"},
@@ -50,8 +51,22 @@ class _HomePageState extends State<HomePage> {
           type == "friend_request_updated" ||
           type == "friend_added" ||
           type == "active_room" ||
-          type == "online_count") {
+          type == "online_count" ||
+          type == "rating_updated" ||
+          type == "challenge_received" ||
+          type == "challenge_updated" ||
+          type == "challenge_declined" ||
+          type == "challenge_expired") {
         setState(() {});
+      }
+      if (type == "challenge_received") {
+        final fromName = event["fromName"]?.toString() ?? "A player";
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$fromName challenged you")));
+      }
+      if (type == "match_found" && event["challenge"] == true) {
+        _openChallengeMatch(event);
       }
     });
     widget.battleService.requestFriendRequests();
@@ -253,6 +268,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openChallengeMatch(Map<String, dynamic> event) {
+    if (_openingChallengeMatch) return;
+    _openingChallengeMatch = true;
+
+    final players = event["players"] as List<dynamic>? ?? const [];
+    final myUserId = widget.battleService.currentUser?.userId;
+    final opponent = players.firstWhere(
+      (p) => p["userId"]?.toString() != myUserId,
+      orElse: () => players.isNotEmpty ? players.last : <String, dynamic>{},
+    );
+    final mode = event["mode"]?.toString() ?? "classic";
+    final restoredRoom = <String, dynamic>{
+      "roomId": event["roomId"],
+      "mode": mode,
+      "language": event["language"] ?? "english",
+      "questions": event["questions"] ?? const [],
+      "myScore": 0,
+      "opponentScore": 0,
+      "opponentName": opponent["name"]?.toString() ?? "Opponent",
+      "opponentAvatar": opponent["avatarBase64"]?.toString(),
+      "opponentFinished": false,
+      "myCurrentIndex": 0,
+      "currentWord": event["startWord"],
+      "startWord": event["startWord"],
+      "usedWords": event["usedWords"] ?? const [],
+      "durationSeconds": event["durationSeconds"],
+      "endsAt": event["endsAt"],
+    };
+
+    widget.battleService.roomId = event["roomId"]?.toString();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _buildBattleScreen(
+          language: event["language"]?.toString() ?? "english",
+          mode: mode,
+          restoredRoom: restoredRoom,
+        ),
+      ),
+    ).whenComplete(() {
+      _openingChallengeMatch = false;
+    });
+  }
+
   Future<void> _loadSavedLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(Kconstants.battleLanguageKey);
@@ -284,7 +343,9 @@ class _HomePageState extends State<HomePage> {
           "languageRomanian": loc.languageRomanian,
         }[languageKey] ??
         selectedLanguage;
-    final hasNotifications = widget.battleService.friendRequests.isNotEmpty;
+    final hasNotifications =
+        widget.battleService.friendRequests.isNotEmpty ||
+        widget.battleService.challenges.isNotEmpty;
 
     final uiLocale = localeNotifier.value?.languageCode ?? 'en';
     final filteredLanguages = languageLabels.entries.where((e) {
@@ -461,28 +522,13 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           ),
-                          Positioned(
-                            bottom: -4,
-                            right: -4,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0D6661), // tertiary
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 4,
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               currentUser?.name ?? "Guest",
@@ -495,10 +541,11 @@ class _HomePageState extends State<HomePage> {
                                 color: Color(0xFF2D2F2C),
                               ),
                             ),
-                            const SizedBox(height: 4),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      _WinStreakBadge(streak: currentUser?.winStreak ?? 0),
                     ],
                   ),
                 ),
@@ -696,6 +743,111 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class _WinStreakBadge extends StatelessWidget {
+  final int streak;
+
+  const _WinStreakBadge({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4C7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CustomPaint(painter: _FireSvgPainter()),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "$streak",
+            style: const TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              color: Color(0xFF553E00),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FireSvgPainter extends CustomPainter {
+  const _FireSvgPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(size.width * 0.1294117647, 0);
+    canvas.scale(size.width / 255, size.height / 255);
+
+    final outerPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [Color(0xFFFF4C0D), Color(0xFFFC9502)],
+      ).createShader(const Rect.fromLTWH(0, 0, 188, 255));
+
+    final outerPath = Path()
+      ..moveTo(187.899, 164.809)
+      ..cubicTo(185.803, 214.868, 144.574, 254.812, 94.000, 254.812)
+      ..cubicTo(42.085, 254.812, 0.000, 211.312, 0.000, 160.812)
+      ..cubicTo(0.000, 154.062, -0.121, 140.572, 10.000, 117.812)
+      ..cubicTo(16.057, 104.191, 19.856, 95.634, 22.000, 87.812)
+      ..cubicTo(23.178, 83.513, 25.469, 76.683, 32.000, 87.812)
+      ..cubicTo(35.851, 94.374, 36.000, 103.812, 36.000, 103.812)
+      ..cubicTo(36.000, 103.812, 50.328, 92.817, 60.000, 71.812)
+      ..cubicTo(74.179, 41.019, 62.866, 22.612, 59.000, 9.812)
+      ..cubicTo(57.662, 5.384, 56.822, -2.574, 66.000, 0.812)
+      ..cubicTo(75.352, 4.263, 100.076, 21.570, 113.000, 39.812)
+      ..cubicTo(131.445, 65.847, 138.000, 90.812, 138.000, 90.812)
+      ..cubicTo(138.000, 90.812, 143.906, 83.482, 146.000, 75.812)
+      ..cubicTo(148.365, 67.151, 148.400, 58.573, 155.999, 67.813)
+      ..cubicTo(163.226, 76.600, 173.959, 93.113, 180.000, 108.812)
+      ..cubicTo(190.969, 137.321, 187.899, 164.809, 187.899, 164.809)
+      ..close();
+    canvas.drawPath(outerPath, outerPaint);
+
+    final middlePath = Path()
+      ..moveTo(94.000, 254.812)
+      ..cubicTo(58.101, 254.812, 29.000, 225.711, 29.000, 189.812)
+      ..cubicTo(29.000, 168.151, 37.729, 155.000, 55.896, 137.166)
+      ..cubicTo(67.528, 125.747, 78.415, 111.722, 83.042, 102.172)
+      ..cubicTo(83.953, 100.292, 86.026, 90.495, 94.019, 101.966)
+      ..cubicTo(98.212, 107.982, 104.785, 118.681, 109.000, 127.812)
+      ..cubicTo(116.266, 143.555, 118.000, 158.812, 118.000, 158.812)
+      ..cubicTo(118.000, 158.812, 125.121, 154.616, 130.000, 143.812)
+      ..cubicTo(131.573, 140.330, 134.753, 127.148, 143.643, 140.328)
+      ..cubicTo(150.166, 150.000, 159.127, 167.390, 159.000, 189.812)
+      ..cubicTo(159.000, 225.711, 129.898, 254.812, 94.000, 254.812)
+      ..close();
+    canvas.drawPath(middlePath, Paint()..color = const Color(0xFFFC9502));
+
+    final innerPath = Path()
+      ..moveTo(95.000, 183.812)
+      ..cubicTo(104.250, 183.812, 104.250, 200.941, 116.000, 223.812)
+      ..cubicTo(123.824, 239.041, 112.121, 254.812, 95.000, 254.812)
+      ..cubicTo(77.879, 254.812, 69.000, 240.933, 69.000, 223.812)
+      ..cubicTo(69.000, 206.692, 85.750, 183.812, 95.000, 183.812)
+      ..close();
+    canvas.drawPath(innerPath, Paint()..color = const Color(0xFFFCE202));
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _BattleButton extends StatefulWidget {

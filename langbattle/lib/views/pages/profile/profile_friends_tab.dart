@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:langbattle/services/web-socket.dart';
+import 'package:langbattle/widgets/player_profile_modal.dart';
 import 'package:langbattle/widgets/user_avatar.dart';
 
 class ProfileFriendsTab extends StatefulWidget {
@@ -29,6 +30,9 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
           type == 'friend_removed' ||
           type == 'search_players_result') {
         setState(() {});
+      }
+      if (type == 'online_count') {
+        widget.battleService.requestFriendsList();
       }
       if (type == 'error') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,6 +131,13 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
             friends.any((f) => f.userId == player.userId) ||
             player.isFriend;
         return _FriendRow(
+          onTap: player.isSelf
+              ? null
+              : () => showPlayerProfileModal(
+                  context: context,
+                  battleService: widget.battleService,
+                  userId: player.userId,
+                ),
           avatar: UserAvatar(
             name: player.name,
             base64Image: null,
@@ -177,12 +188,12 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
       itemBuilder: (context, index) {
         final friend = friends[index];
         return _FriendRow(
-          avatar: UserAvatar(
-            name: friend.name,
-            base64Image: friend.avatarBase64,
-            size: 40,
-            borderRadius: 12,
+          onTap: () => showPlayerProfileModal(
+            context: context,
+            battleService: widget.battleService,
+            userId: friend.userId,
           ),
+          avatar: _FriendAvatar(friend: friend),
           name: friend.name,
           subtitle: 'Rating: ${friend.rating}',
           trailing: IconButton(
@@ -198,60 +209,107 @@ class _ProfileFriendsTabState extends State<ProfileFriendsTab> {
   }
 }
 
+class _FriendAvatar extends StatelessWidget {
+  final FriendInfo friend;
+
+  const _FriendAvatar({required this.friend});
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = UserAvatar(
+      name: friend.name,
+      base64Image: friend.avatarBase64,
+      size: 40,
+      borderRadius: 12,
+    );
+
+    if (!friend.isOnline) return avatar;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D6661),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _FriendRow extends StatelessWidget {
   final Widget avatar;
   final String name;
   final String subtitle;
   final Widget trailing;
+  final VoidCallback? onTap;
 
   const _FriendRow({
     required this.avatar,
     required this.name,
     required this.subtitle,
     required this.trailing,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE1E1DC)),
-      ),
-      child: Row(
-        children: [
-          avatar,
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: Color(0xFF2D2F2C),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF5A5C58),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+        child: Ink(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE1E1DC)),
           ),
-          trailing,
-        ],
+          child: Row(
+            children: [
+              avatar,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: Color(0xFF2D2F2C),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF5A5C58),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing,
+            ],
+          ),
+        ),
       ),
     );
   }

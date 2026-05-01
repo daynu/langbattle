@@ -5,6 +5,8 @@ const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const app = require("express")();
 
 const server = http.createServer(app);
@@ -40,7 +42,7 @@ const WORD_CHAIN_DURATION_SECONDS = 60;
 const WORD_CHAIN_STARTERS = {
   english: ["apple", "ocean", "tiger", "rocket", "planet", "garden"],
   german: ["apfel", "engel", "nacht", "tasse", "fenster", "garten"],
-  french: ["ami", "orange", "ecole", "etoile", "nature", "salade"],
+  french: ["ami", "orange", "école", "étoile", "nature", "salade"],
 };
 
 function normalizeChainWord(word) {
@@ -51,8 +53,17 @@ function normalizeChainWord(word) {
     .replace(/\s+/g, "");
 }
 
+function vocabularyKey(word) {
+  return normalizeChainWord(word)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
+    .replace(/ß/g, "ss");
+}
+
 function getLastLetter(word) {
-  const letters = normalizeChainWord(word).match(/\p{L}/gu) || [];
+  const letters = vocabularyKey(word).match(/\p{L}/gu) || [];
   return letters.length ? letters[letters.length - 1] : "";
 }
 
@@ -61,9 +72,72 @@ function isWordChainCandidateValid(word) {
   return normalized.length >= 2 && /^\p{L}+$/u.test(normalized);
 }
 
+function loadWordChainVocabularies() {
+  const vocabDir = path.join(__dirname, "data", "word-chain");
+  const vocabularies = {};
+
+  for (const language of Object.keys(WORD_CHAIN_STARTERS)) {
+    const filePath = path.join(vocabDir, `${language}.json`);
+    const wordsByKey = new Map();
+
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      const rawWords = Array.isArray(parsed) ? parsed : parsed.words;
+
+      if (!Array.isArray(rawWords)) {
+        throw new Error("Expected a JSON array or an object with a words array");
+      }
+
+      for (const entry of rawWords) {
+        const display = typeof entry === "string"
+          ? entry
+          : (entry.display ?? entry.word ?? "").toString();
+        const key = typeof entry === "object" && entry.key
+          ? entry.key.toString()
+          : vocabularyKey(display);
+
+        if (key && isWordChainCandidateValid(display) && !wordsByKey.has(key)) {
+          wordsByKey.set(key, display);
+        }
+      }
+
+      console.log(`Loaded ${wordsByKey.size} word chain words for ${language}`);
+    } catch (err) {
+      console.warn(`Word chain vocabulary not loaded for ${language}: ${err.message}`);
+    }
+
+    vocabularies[language] = wordsByKey;
+  }
+
+  return vocabularies;
+}
+
+const WORD_CHAIN_VOCABULARIES = loadWordChainVocabularies();
+
+function getWordChainDisplayWord(language, word) {
+  const lang = normalizeLanguage(language);
+  const vocabulary = WORD_CHAIN_VOCABULARIES[lang];
+  if (!vocabulary || vocabulary.size === 0) return normalizeChainWord(word);
+  return vocabulary.get(vocabularyKey(word)) ?? null;
+}
+
 async function getStartWord(language) {
   const lang = normalizeLanguage(language);
+  const vocabulary = WORD_CHAIN_VOCABULARIES[lang];
   const starters = WORD_CHAIN_STARTERS[lang] || WORD_CHAIN_STARTERS.english;
+
+  if (vocabulary && vocabulary.size > 0) {
+    const vocabularyStarters = starters
+      .map((word) => vocabulary.get(vocabularyKey(word)))
+      .filter(Boolean);
+    if (vocabularyStarters.length > 0) {
+      return vocabularyStarters[Math.floor(Math.random() * vocabularyStarters.length)];
+    }
+
+    const words = Array.from(vocabulary.values());
+    return words[Math.floor(Math.random() * words.length)];
+  }
+
   return starters[Math.floor(Math.random() * starters.length)];
 }
 
@@ -275,6 +349,7 @@ socket.on("join_queue", async (data = {}) => {
       ...(mode === "word_chain" && {
         currentWord: questionsPayload.startWord,
         usedWords: new Set([questionsPayload.startWord]),
+        usedWordKeys: new Set([vocabularyKey(questionsPayload.startWord)]),
         endsAt: new Date(questionsPayload.endsAt),
       }),
     };
@@ -409,6 +484,15 @@ socket.on("join_queue", async (data = {}) => {
     if (action === "word_chain_move") {
       const roomMem = rooms[data.roomId];
       const submittedWord = normalizeChainWord(data.payload?.word);
+      const submittedKey = vocabularyKey(data.payload?.word);
+      const displayWord = roomMem?.mode === "word_chain"
+        ? getWordChainDisplayWord(roomMem.language, submittedWord)
+        : null;
+      const usedWordKeys = roomMem?.usedWordKeys
+        ?? new Set(Array.from(roomMem?.usedWords ?? []).map(vocabularyKey));
+      if (roomMem?.mode === "word_chain") {
+        roomMem.usedWordKeys = usedWordKeys;
+      }
 
       data.payload.playerId = socket.userId?.toString();
 
@@ -421,30 +505,34 @@ socket.on("join_queue", async (data = {}) => {
       } else if (!isWordChainCandidateValid(submittedWord)) {
         data.payload.valid = false;
         data.payload.error = "Use a single word with letters only.";
-      } else if (roomMem.usedWords.has(submittedWord)) {
+      } else if (!displayWord) {
+        data.payload.valid = false;
+        data.payload.error = "That word is not in the vocabulary.";
+      } else if (usedWordKeys.has(submittedKey)) {
         data.payload.valid = false;
         data.payload.error = "That word has already been used.";
       } else {
         const expectedLetter = getLastLetter(roomMem.currentWord);
 
-        if (expectedLetter && submittedWord[0] !== expectedLetter) {
+        if (expectedLetter && submittedKey[0] !== expectedLetter) {
           data.payload.valid = false;
           data.payload.error = `Your word must start with "${expectedLetter.toUpperCase()}".`;
         } else {
-          roomMem.currentWord = submittedWord;
-          roomMem.usedWords.add(submittedWord);
+          roomMem.currentWord = displayWord;
+          roomMem.usedWords.add(displayWord);
+          usedWordKeys.add(submittedKey);
           roomMem.scores[socket.id] = (roomMem.scores[socket.id] || 0) + 1;
 
           data.payload.valid = true;
-          data.payload.word = submittedWord;
-          data.payload.currentWord = submittedWord;
+          data.payload.word = displayWord;
+          data.payload.currentWord = displayWord;
           data.payload.usedWords = Array.from(roomMem.usedWords);
 
           await db.collection("active_rooms").updateOne(
             { roomId: data.roomId },
             {
               $set: {
-                currentWord: submittedWord,
+                currentWord: displayWord,
                 usedWords: Array.from(roomMem.usedWords),
               },
               $inc: { "players.$[elem].score": 1 },
@@ -1608,6 +1696,7 @@ async function startChallengeMatch(p1, p2, language, mode) {
     ...(mode === "word_chain" && {
       currentWord: questionsPayload.startWord,
       usedWords: new Set([questionsPayload.startWord]),
+      usedWordKeys: new Set([vocabularyKey(questionsPayload.startWord)]),
       endsAt: new Date(questionsPayload.endsAt),
     }),
   };
